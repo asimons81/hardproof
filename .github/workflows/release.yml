@@ -52,7 +52,7 @@ jobs:
       - run: python scripts/smoke_install.py dist/hardproof-*.whl
       - name: Generate CycloneDX SBOM and SHA256 checksums
         run: python scripts/build_sbom.py dist
-      - uses: actions/attest-build-provenance@v2
+      - uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             dist/*.whl
