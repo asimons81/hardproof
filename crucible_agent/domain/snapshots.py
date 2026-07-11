@@ -1,0 +1,38 @@
+"""Workspace identity captured with verification evidence."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+
+def _digest(name: str, value: str, lengths: tuple[int, ...]) -> None:
+    if len(value) not in lengths or any(char not in "0123456789abcdef" for char in value.lower()):
+        raise ValueError(f"{name} must be a hexadecimal digest")
+
+
+@dataclass(frozen=True, slots=True)
+class WorkspaceSnapshot:
+    head_sha: str
+    diff_sha256: str
+    untracked_sha256: str
+
+    def __post_init__(self) -> None:
+        _digest("head_sha", self.head_sha, (40, 64))
+        _digest("diff_sha256", self.diff_sha256, (64,))
+        _digest("untracked_sha256", self.untracked_sha256, (64,))
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "head_sha": self.head_sha,
+            "diff_sha256": self.diff_sha256,
+            "untracked_sha256": self.untracked_sha256,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> WorkspaceSnapshot:
+        return cls(
+            head_sha=str(payload["head_sha"]),
+            diff_sha256=str(payload["diff_sha256"]),
+            untracked_sha256=str(payload["untracked_sha256"]),
+        )
