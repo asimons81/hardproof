@@ -7,6 +7,8 @@
 
 Crucible is a local-first engineering protocol for Hermes Agent. It turns rough software requests into durable discovery, approved design and planning, tracked implementation, independent review, and fresh verification evidence tied to the final Git workspace state.
 
+> **Working-name notice:** “Crucible” has not completed trademark or marketplace clearance. The descriptive distribution identity is `crucible-agent`; this project is independent and is not affiliated with Atlassian.
+
 ## Install and enable
 
 From GitHub:
@@ -61,6 +63,13 @@ See [architecture](docs/architecture.md), [protocol profiles](docs/profiles.md),
 Crucible coordinates engineering process; it is not a security sandbox. Policy hooks do not replace OS permissions, protected branches, sandboxing, isolation, or human code review. Force pushes are blocked, recognized destructive actions are blocked or approval-gated, and source mutation is stage-aware. Project-local configuration and plugins execute with the user's local authority.
 
 See [SECURITY.md](SECURITY.md) and the [security model](docs/security-model.md).
+
+## Known limitations in v0.1.0
+
+- Policy hooks coordinate process but are not a security sandbox or complete shell parser.
+- Managed runs require a Git worktree for workspace-bound freshness evidence.
+- Local Hermes compatibility evidence currently covers Hermes Agent 0.18.2 on native Windows; other supported operating systems are enforced by CI and require a remote green run before publication.
+- The working product name remains subject to trademark and marketplace clearance.
 
 ## Privacy
 

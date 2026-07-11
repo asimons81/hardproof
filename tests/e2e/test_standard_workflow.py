@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 
 from crucible_agent.commands.shared import CommandContext, CommandService
@@ -30,9 +31,21 @@ class FakePluginContext:
     def dispatch_tool(self, tool_name, args, **kwargs): return '{"output":"passed","exit_code":0}'
 
 
-class PassingRunner:
+class LocalPytestRunner:
+    def __init__(self, project_root: Path) -> None:
+        self.project_root = project_root
+
     def run(self, command: str, timeout_seconds: int) -> CommandResult:
-        return CommandResult(0, f"passed: {command}")
+        assert command == "python -m pytest"
+        completed = subprocess.run(
+            [sys.executable, "-m", "pytest", "-q"],
+            cwd=self.project_root,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
+        return CommandResult(completed.returncode, completed.stdout + completed.stderr)
 
 
 def git_project(root: Path) -> None:
@@ -111,7 +124,7 @@ def test_full_standard_workflow_survives_restart_and_reproves_after_edit(tmp_pat
         run_id, RunStage.VERIFY, commands.transition_facts(run_id), reason="review approved"
     )
 
-    evidence = EvidenceService(commands.repository, tmp_path, run_dir, PassingRunner())
+    evidence = EvidenceService(commands.repository, tmp_path, run_dir, LocalPytestRunner(tmp_path))
     first = evidence.verify(run_id)
     assert first[0].status is EvidenceStatus.PASSED and evidence.is_fresh(first[0])
     (tmp_path / "tiny.py").write_text("def value():\n    return 2  # clarified\n", encoding="utf-8")

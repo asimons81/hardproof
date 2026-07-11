@@ -42,7 +42,7 @@ jobs:
       - run: python -m ruff check crucible_agent tests scripts
       - run: python -m mypy crucible_agent
       - run: python -m build
-      - run: python -m twine check dist/*
+      - run: python -m twine check dist/*.whl dist/*.tar.gz
       - run: python scripts/smoke_install.py dist/crucible_agent-*.whl
       - name: Generate CycloneDX SBOM and SHA256 checksums
         run: python scripts/build_sbom.py dist

@@ -84,7 +84,7 @@ jobs:
       - run: python -m pip install -e ".[dev]"
       - name: Build wheel and sdist
         run: python -m build
-      - run: python -m twine check dist/*
+      - run: python -m twine check dist/*.whl dist/*.tar.gz
       - name: Package-data contract
         run: python -m pytest tests/contract/test_package_contract.py tests/contract/test_skills.py tests/contract/test_templates.py
       - name: License file check
