@@ -67,5 +67,7 @@ jobs:
             dist/*.json
             dist/SHA256SUMS
           generate_release_notes: true
+      - name: Clean dist for PyPI (keep only packages)
+        run: rm -f dist/SHA256SUMS dist/hardproof.cdx.json
       - name: Publish with PyPI Trusted Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
