@@ -2,7 +2,7 @@
 
 Build Hardproof as a production-grade, contributor-ready, open-source engineering protocol for Hermes Agent through the gated release train v0.1.0 to v1.0.0.
 
-The binding source is `hardproof_codex_plan_and_roadmap.md`. Each release must satisfy its specification, tests, documentation, migration, security, packaging, compatibility, and evidence gates before the next release begins.
+The binding source is `ROADMAP.md`. Each release must satisfy its specification, tests, documentation, migration, security, packaging, compatibility, and evidence gates before the next release begins.
 
 ## Operating contract
 
