@@ -116,6 +116,10 @@ class CommandService:
             learning_skipped=any(event.event_type == "learning_skipped" for event in events),
         )
 
+    def transition_facts(self, run_id: str) -> TransitionFacts:
+        """Return current durable facts for model-requested transition evaluation."""
+        return self._facts(run_id)
+
     def execute(self, argv: list[str]) -> CommandResult:
         if not argv:
             raise ValueError("a Crucible subcommand is required")
