@@ -11,9 +11,12 @@ from crucible_agent.commands.cli import register_cli
 from crucible_agent.commands.shared import CommandContext, CommandService
 from crucible_agent.commands.slash import register_slash
 from crucible_agent.compat import require_compatible
+from crucible_agent.config import load_config
 from crucible_agent.hooks.context import ContextHook, register_context_hooks
 from crucible_agent.hooks.sessions import SessionHooks
 from crucible_agent.hooks.tool_policy import ToolPolicyHook, register_tool_policy_hooks
+from crucible_agent.hooks.verification import VerificationHook, register_verification_hook
+from crucible_agent.services.evidence import EvidenceService, HermesCommandRunner
 from crucible_agent.services.sessions import SessionService
 from crucible_agent.tools.handlers import HandlerDependencies, register_tools
 
@@ -65,6 +68,32 @@ def register(ctx: Any) -> None:
         command_service = CommandService(CommandContext(
             Path.cwd(), actor="model", source="tool", hermes_context=ctx
         ))
+        def verify(args: dict[str, Any]) -> dict[str, Any]:
+            config = load_config(command_service.paths.config)
+            run_id = command_service.active_run_id()
+            evidence_service = EvidenceService(
+                command_service.repository,
+                command_service.context.project_root,
+                command_service.paths.run_directory(run_id),
+                HermesCommandRunner(ctx),
+                maximum_stored_output_size=config.maximum_stored_output_size,
+            )
+            records = evidence_service.verify(
+                run_id,
+                checks=tuple(args.get("checks") or ()) or None,
+                all_required=bool(args.get("all_required", True)),
+                timeout_override=args.get("timeout_override"),
+            )
+            return {
+                "ok": all(item.status.value == "passed" for item in records),
+                "evidence": [
+                    {
+                        "check": item.check_name, "exit_code": item.exit_code,
+                        "output_path": item.output_path, "status": item.status.value,
+                    }
+                    for item in records
+                ],
+            }
 
         def report(args: dict[str, Any]) -> dict[str, Any]:
             action = str(args.get("action", "status"))
@@ -84,7 +113,9 @@ def register(ctx: Any) -> None:
             os.replace(temporary, destination)
             return destination.relative_to(command_service.context.project_root).as_posix()
 
-        return HandlerDependencies(command_service=command_service, report=report, spill=spill)
+        return HandlerDependencies(
+            command_service=command_service, verify=verify, report=report, spill=spill
+        )
 
     register_tools(ctx, tool_dependencies)
     register_skills(ctx)
@@ -108,3 +139,23 @@ def register(ctx: Any) -> None:
         )
 
     register_tool_policy_hooks(ctx, policy_hook)
+
+    def verification_hook() -> VerificationHook:
+        command_service = CommandService(CommandContext(
+            Path.cwd(), actor="model", source="hook", hermes_context=ctx
+        ))
+        config = load_config(command_service.paths.config)
+        evidence = EvidenceService(
+            command_service.repository,
+            command_service.context.project_root,
+            command_service.paths.runs / "__hook_unbound__",
+            HermesCommandRunner(ctx),
+            maximum_stored_output_size=config.maximum_stored_output_size,
+        )
+        return VerificationHook(
+            SessionService(command_service.repository, command_service.paths),
+            command_service,
+            evidence,
+        )
+
+    register_verification_hook(ctx, verification_hook)

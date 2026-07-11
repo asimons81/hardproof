@@ -20,6 +20,7 @@ from crucible_agent.domain.models import Run, SessionBinding, VerificationCheck,
 from crucible_agent.paths import ProjectPaths
 from crucible_agent.policy.stage_rules import TransitionFacts
 from crucible_agent.services.approvals import ApprovalService
+from crucible_agent.services.evidence import evidence_with_freshness
 from crucible_agent.services.runs import RunService
 from crucible_agent.storage.database import Database, DatabaseCorruptionError
 from crucible_agent.storage.migrations import MigrationError, migrate
@@ -104,13 +105,28 @@ class CommandService:
         )
         return Path(result.stdout.strip()).resolve() if result.returncode == 0 else None
 
+    def _ensure_state_ignored(self, git_root: Path) -> None:
+        probe = subprocess.run(
+            ["git", "-C", str(git_root), "check-ignore", "-q", ".crucible/state/probe"],
+            capture_output=True, check=False, timeout=10,
+        )
+        if probe.returncode == 0:
+            return
+        exclude = git_root / ".git" / "info" / "exclude"
+        exclude.parent.mkdir(parents=True, exist_ok=True)
+        existing = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
+        separator = "" if not existing or existing.endswith("\n") else "\n"
+        exclude.write_text(existing + separator + ".crucible/\n", encoding="utf-8")
+
     def _facts(self, run_id: str) -> TransitionFacts:
         events = self.repository.list_events(run_id)
         return TransitionFacts(
             artifacts=self.repository.list_artifacts(run_id),
             approvals=self.repository.list_approvals(run_id),
             tasks=self.repository.list_tasks(run_id),
-            evidence=self.repository.list_evidence(run_id),
+            evidence=evidence_with_freshness(
+                self.repository.list_evidence(run_id), self.context.project_root
+            ),
             approved_review=any(event.event_type == "review_approved" for event in events),
             recorded_change=any(event.event_type == "change_recorded" for event in events),
             learning_skipped=any(event.event_type == "learning_skipped" for event in events),
@@ -143,8 +159,10 @@ class CommandService:
     def _start(self, rest: list[str]) -> CommandResult:
         if len(rest) < 2:
             raise ValueError("usage: start <quick|standard|critical> <request>")
-        if self._git_root() is None:
+        git_root = self._git_root()
+        if git_root is None:
             raise ValueError("Crucible managed runs require a Git repository")
+        self._ensure_state_ignored(git_root)
         try:
             profile = RunProfile(rest[0])
         except ValueError as exc:
