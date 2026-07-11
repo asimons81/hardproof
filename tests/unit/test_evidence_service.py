@@ -5,9 +5,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+import pytest
+
 from crucible_agent.domain.enums import EvidenceStatus, RunProfile
 from crucible_agent.domain.models import Run, VerificationCheck
-from crucible_agent.services.evidence import CommandResult, EvidenceService
+from crucible_agent.services.evidence import CommandResult, EvidenceService, HermesCommandRunner
 from crucible_agent.storage.database import Database
 from crucible_agent.storage.migrations import migrate
 from crucible_agent.storage.repository import RunRepository
@@ -126,3 +128,42 @@ def test_unknown_check_is_rejected_without_execution(tmp_path: Path) -> None:
         assert "not configured" in str(exc)
     else:
         raise AssertionError("unknown check executed")
+
+
+def test_hermes_runner_dispatches_public_terminal_shape() -> None:
+    class Context:
+        def dispatch_tool(self, name: str, arguments: dict[str, object]) -> object:
+            assert name == "terminal"
+            assert arguments == {"command": "python -m pytest", "timeout": 45}
+            return {"result": {"exit_code": 0, "stdout": "passed"}}
+
+    result = HermesCommandRunner(Context()).run("python -m pytest", 45)
+    assert result == CommandResult(0, "passed")
+
+
+def test_empty_check_selection_is_rejected(tmp_path: Path) -> None:
+    evidence, repository, run = service(tmp_path, CommandResult(0, "passed"))
+    configured = repository.list_verification_checks(run.id)[0]
+    with repository.database.connect() as connection, connection:
+        connection.execute(
+            "UPDATE verification_checks SET required = 0 WHERE id = ?", (configured.id,)
+        )
+    with pytest.raises(ValueError, match="no verification checks selected"):
+        evidence.verify(run.id)
+
+
+def test_all_required_false_executes_optional_checks(tmp_path: Path) -> None:
+    evidence, repository, run = service(tmp_path, CommandResult(0, "passed"))
+    configured = repository.list_verification_checks(run.id)[0]
+    with repository.database.connect() as connection, connection:
+        connection.execute(
+            "UPDATE verification_checks SET required = 0 WHERE id = ?", (configured.id,)
+        )
+    assert len(evidence.verify(run.id, all_required=False)) == 1
+
+
+def test_failed_evidence_is_not_fresh_and_remains_failed(tmp_path: Path) -> None:
+    evidence, _, run = service(tmp_path, CommandResult(1, "failed"))
+    record = evidence.verify(run.id)[0]
+    assert not evidence.is_fresh(record)
+    assert evidence.freshness_status(record) is EvidenceStatus.FAILED

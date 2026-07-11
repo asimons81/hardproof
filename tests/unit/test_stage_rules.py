@@ -111,6 +111,20 @@ def test_review_requires_approved_review_or_human_waiver() -> None:
     assert evaluate_transition(run_at(RunStage.REVIEW), RunStage.VERIFY, facts).allowed
 
 
+def test_waiver_requires_a_human_source_actor_and_reason() -> None:
+    for invalid in (
+        approval(ApprovalGate.WAIVER, reason=None),
+        approval(ApprovalGate.WAIVER, actor="agent", reason="accepted risk"),
+        approval(ApprovalGate.WAIVER, source="tool", reason="accepted risk"),
+    ):
+        result = evaluate_transition(
+            run_at(RunStage.REVIEW),
+            RunStage.VERIFY,
+            TransitionFacts(approvals=(invalid,)),
+        )
+        assert result.blockers == ("approved review or human waiver missing",)
+
+
 def test_stale_or_failed_evidence_blocks_delivery() -> None:
     stale = passed_evidence()
     object.__setattr__(stale, "status", EvidenceStatus.STALE)
@@ -138,6 +152,32 @@ def test_quick_skip_requires_reason_and_is_persistable() -> None:
     denied = evaluate_transition(run, RunStage.IMPLEMENT, TransitionFacts())
     assert denied.blockers == ("quick stage skip requires a recorded reason",)
     assert evaluate_transition(run, RunStage.IMPLEMENT, TransitionFacts(), skip_reason="localized fix").allowed
+
+
+def test_forward_artifact_and_learning_gates_report_missing_records() -> None:
+    discovery = evaluate_transition(
+        run_at(RunStage.DISCOVERY), RunStage.DESIGN, TransitionFacts()
+    )
+    plan = evaluate_transition(run_at(RunStage.PLAN), RunStage.IMPLEMENT, TransitionFacts())
+    deliver = evaluate_transition(run_at(RunStage.DELIVER), RunStage.LEARN, TransitionFacts())
+    learn = evaluate_transition(run_at(RunStage.LEARN), RunStage.COMPLETE, TransitionFacts())
+    assert discovery.blockers == ("discovery artifact missing",)
+    assert "plan artifact missing" in plan.blockers
+    assert deliver.blockers == ("completion report draft missing",)
+    assert learn.blockers == ("learning artifact or explicit skip reason missing",)
+
+
+def test_quick_jump_to_delivery_still_requires_verification_and_completion() -> None:
+    run = run_at(RunStage.INTAKE, RunProfile.QUICK)
+    deliver = evaluate_transition(run, RunStage.DELIVER, TransitionFacts(), skip_reason="hotfix")
+    learn = evaluate_transition(
+        run,
+        RunStage.LEARN,
+        TransitionFacts(evidence=(passed_evidence(),)),
+        skip_reason="hotfix",
+    )
+    assert deliver.blockers == ("1 fresh passing verification check required; found 0",)
+    assert learn.blockers == ("completion report draft missing",)
 
 
 @pytest.mark.parametrize("terminal", [RunStage.COMPLETE, RunStage.ABORTED])

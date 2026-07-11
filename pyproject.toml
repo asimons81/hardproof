@@ -23,6 +23,7 @@ classifiers = [
 [project.optional-dependencies]
 dev = [
   "build>=1.2",
+  "cyclonedx-bom>=7",
   "hypothesis>=6",
   "mypy>=1.10",
   "pip-audit>=2.7",

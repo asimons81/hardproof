@@ -77,6 +77,33 @@ def test_deployment_blocked_before_deliver(tmp_path: Path) -> None:
     assert decision.rule_key == "terminal.deployment.before_deliver"
 
 
+@pytest.mark.parametrize(
+    ("command", "rule"),
+    [
+        ("git clean -fd", "terminal.destructive.git_clean"),
+        ("Remove-Item build -Recurse", "terminal.destructive.recursive_delete"),
+    ],
+)
+def test_destructive_commands_are_blocked_outside_critical(
+    tmp_path: Path, command: str, rule: str
+) -> None:
+    decision = evaluate_tool_call(
+        "terminal", {"cmd": command}, context(tmp_path, RunStage.IMPLEMENT)
+    )
+    assert decision.action == "block"
+    assert decision.rule_key == rule
+
+
+def test_critical_deployment_requires_approval_at_deliver(tmp_path: Path) -> None:
+    decision = evaluate_tool_call(
+        "terminal",
+        {"code": "twine upload dist/*"},
+        context(tmp_path, RunStage.DELIVER, RunProfile.CRITICAL),
+    )
+    assert decision.action == "approval"
+    assert decision.rule_key == "terminal.deployment.critical"
+
+
 def test_verify_blocks_unrelated_source_edit(tmp_path: Path) -> None:
     decision = evaluate_tool_call(
         "patch", {"path": str(tmp_path / "src/module.py")}, context(tmp_path, RunStage.VERIFY)
@@ -110,3 +137,11 @@ def test_mutating_tool_names_are_feature_configurable(tmp_path: Path) -> None:
     )
     assert evaluate_tool_call("future_write", {"path": "src.py"}, policy).action == "block"
     assert evaluate_tool_call("write_file", {"path": "src.py"}, policy).action == "allow"
+
+
+def test_missing_target_is_never_treated_as_an_artifact_write(tmp_path: Path) -> None:
+    decision = evaluate_tool_call(
+        "write_file", {"destination": "   "}, context(tmp_path, RunStage.DESIGN)
+    )
+    assert decision.action == "block"
+    assert decision.rule_key == "stage.before_implement.source_mutation"

@@ -41,6 +41,18 @@ def test_interrupted_migration_rolls_back(tmp_path: Path) -> None:
         ).fetchone() is None
 
 
+def test_incomplete_migration_is_rejected_before_execution(tmp_path: Path) -> None:
+    database = Database(tmp_path / "crucible.db")
+    with database.connect() as connection, pytest.raises(
+        MigrationError, match="incomplete SQL statement"
+    ):
+        apply_migration_sql(connection, 99, "CREATE TABLE unfinished(value TEXT)")
+    with database.connect() as connection:
+        assert connection.execute(
+            "SELECT name FROM sqlite_master WHERE name = 'unfinished'"
+        ).fetchone() is None
+
+
 def test_unknown_newer_schema_refuses_write(tmp_path: Path) -> None:
     database = Database(tmp_path / "crucible.db")
     migrate(database)
