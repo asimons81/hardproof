@@ -62,6 +62,11 @@ class RunRepository:
             raise RunNotFoundError(run_id)
         return Run.from_dict(dict(row))
 
+    def list_runs(self) -> tuple[Run, ...]:
+        with self.database.connect() as connection:
+            rows = connection.execute("SELECT * FROM runs ORDER BY created_at, id").fetchall()
+        return tuple(Run.from_dict(dict(row)) for row in rows)
+
     @staticmethod
     def _append_event(
         connection: Any,
