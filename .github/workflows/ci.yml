@@ -20,6 +20,8 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: python -m pip install -e ".[dev]"
+      - name: Build (wheel contract tests need dist/)
+        run: python -m build
       - name: Ruff
         run: python -m ruff check hardproof tests scripts
       - name: mypy
@@ -69,6 +71,8 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
       - run: python -m pip install -e ".[dev]"
+      - name: Build (wheel contract tests need dist/)
+        run: python -m build
       - name: Unit, integration, contract, and e2e tests
         run: python -m pytest
 
@@ -90,7 +94,7 @@ jobs:
       - name: License file check
         run: python -m pytest tests/contract/test_open_source_surface.py::test_license_is_full_apache_2_text
       - name: Clean wheel installation smoke
-        run: python scripts/smoke_install.py dist/hardproof-0.1.0-py3-none-any.whl
+        run: python scripts/smoke_install.py dist/hardproof-*.whl
       - name: pip-audit
         run: python -m pip_audit . --strict
       - name: Build SBOM and checksums
