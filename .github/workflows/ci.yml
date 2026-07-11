@@ -92,7 +92,7 @@ jobs:
       - name: License file check
         run: python -m pytest tests/contract/test_open_source_surface.py::test_license_is_full_apache_2_text
       - name: Clean wheel installation smoke
-        run: python scripts/smoke_install.py dist/hardproof-0.1.0-py3-none-any.whl
+        run: python scripts/smoke_install.py dist/hardproof-*.whl
       - name: pip-audit
         run: python -m pip_audit . --strict
       - name: Build SBOM and checksums
