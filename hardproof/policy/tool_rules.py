@@ -114,9 +114,12 @@ def _terminal_policy(command: str, context: ToolPolicyContext) -> PolicyDecision
         return _block(primary.rule_key, "Destructive command is blocked for this Hardproof profile.")
     if primary.category is TerminalCategory.DEPLOYMENT:
         if context.run.stage is not RunStage.DELIVER:
-            return _block("terminal.deployment.before_deliver", "Deployment is blocked before DELIVER.")
+            key = primary.rule_key if primary.rule_key.startswith("pack.") else "terminal.deployment.before_deliver"
+            return _block(key, "Deployment is blocked before DELIVER.")
         if context.run.profile is RunProfile.CRITICAL:
-            return _approval("terminal.deployment.critical", "Critical deployment requires human confirmation.")
+            key = primary.rule_key if primary.rule_key.startswith("pack.") else "terminal.deployment.critical"
+            return _approval(key, "Critical deployment requires human confirmation.")
+        return _allow(primary.rule_key, "Deployment is allowed during DELIVER.")
     return None
 
 

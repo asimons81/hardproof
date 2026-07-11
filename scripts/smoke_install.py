@@ -25,7 +25,8 @@ def main() -> int:
         code = (
             "import importlib.metadata as m; import hardproof; "
             "ep=next(e for e in m.entry_points(group='hermes_agent.plugins') if e.name=='hardproof'); "
-            "mod=ep.load(); assert callable(mod.register); assert hardproof.__version__=='0.1.0'"
+            "mod=ep.load(); assert callable(mod.register); "
+            "assert hardproof.__version__==m.version('hardproof')"
         )
         subprocess.run([str(python), "-c", code], check=True)
     print(f"PASS clean wheel install: {wheel}")

@@ -41,3 +41,23 @@ def test_duplicate_edges_and_edge_limit_are_rejected() -> None:
 def test_critical_overlay_cannot_skip() -> None:
     with pytest.raises(StageGraphError, match="critical"):
         compile_stage_graph({"profiles": {"critical": {"skipped_stages": ["LEARN"]}}}, profile=RunProfile.CRITICAL)
+
+
+@pytest.mark.parametrize("value, message", [
+    ([], "must be a mapping"),
+    ({"mystery": []}, "unknown keys"),
+    ({"schema_version": 2}, "schema_version must be 1"),
+    ({"profiles": []}, "profiles must be a mapping"),
+    ({"profiles": {"turbo": {}}}, "unknown profile"),
+    ({"profiles": {"quick": []}}, "is malformed"),
+    ({"required_stages": "VERIFY"}, "bounded list"),
+    ({"required_stages": ["VERIFY", "VERIFY"]}, "contains duplicates"),
+    ({"required_stages": ["LEARN"], "skipped_stages": ["LEARN"]}, "cannot be skipped"),
+    ({"edges": "INTAKE"}, "exceeds limit"),
+    ({"edges": [["INTAKE"]]}, "must contain two stages"),
+    ({"edges": [["INTAKE", "DISCOVERY"]]}, "no deterministic path"),
+    ({"edges": [["INTAKE", "COMPLETE"]], "required_stages": ["PLAN"]}, "unreachable required"),
+])
+def test_diagnostic_boundaries_are_stable(value: object, message: str) -> None:
+    with pytest.raises(StageGraphError, match=message):
+        compile_stage_graph(value, profile=RunProfile.QUICK)

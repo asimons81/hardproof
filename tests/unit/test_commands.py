@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import subprocess
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -67,6 +68,31 @@ def test_config_init_validate_db_migrate_and_doctor(tmp_path: Path) -> None:
     doctor = service.execute(["doctor"])
     assert "Git repository" in doctor.text
     assert "Database" in doctor.text
+
+
+def test_legacy_state_migration_preserves_database_and_writes_recovery_report(tmp_path: Path) -> None:
+    service = CommandService(context(tmp_path))
+    old_database = tmp_path / ".crucible" / "state" / "hardproof.db"
+    old_database.parent.mkdir(parents=True)
+    shutil.copy2(service.paths.database, old_database)
+    result = service.execute(["migrate-state"])
+    assert result.ok
+    assert (tmp_path / ".hardproof.backup" / "state" / "hardproof.db").exists()
+    report = json.loads((tmp_path / ".hardproof" / "migration-report.json").read_text())
+    assert report["database_integrity"] == "ok"
+    assert "Rollback" in result.text
+
+
+def test_legacy_state_conflict_fails_without_overwriting_active_state(tmp_path: Path) -> None:
+    service = CommandService(context(tmp_path))
+    old = tmp_path / ".crucible"
+    old.mkdir()
+    (old / "keep.txt").write_text("old", encoding="utf-8")
+    (service.paths.root / "keep.txt").write_text("new", encoding="utf-8")
+    result = service.execute(["migrate-state"])
+    assert not result.ok
+    assert "Resolve manually" in result.text
+    assert (service.paths.root / "keep.txt").read_text(encoding="utf-8") == "new"
 
 
 def test_evidence_and_export_are_deterministic_and_secret_safe(tmp_path: Path) -> None:

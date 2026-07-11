@@ -37,10 +37,12 @@ def main() -> int:
     sbom = directory / "hardproof.cdx.json"
     subprocess.run(
         [
-            sys.executable, "-m", "cyclonedx_py", "environment",
+            sys.executable, "-m", "cyclonedx_py", "requirements", "-",
+            "--pyproject", str(Path("pyproject.toml").resolve()),
+            "--mc-type", "library", "--output-reproducible",
             "--output-format", "JSON", "--output-file", str(sbom),
         ],
-        check=True,
+        input="PyYAML>=6,<7\n", text=True, check=True,
     )
     write_checksums([*artifacts, sbom], directory / "SHA256SUMS")
     print(f"SBOM: {sbom}")
