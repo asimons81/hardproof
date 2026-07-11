@@ -35,4 +35,5 @@ def test_built_wheel_contains_required_package_data() -> None:
         names = set(archive.namelist())
     assert "crucible_agent/templates/completion.md" in names
     assert "crucible_agent/migrations/001_initial.sql" in names
+    assert "crucible_agent/migrations/002_gatehouse.sql" in names
     assert "crucible_agent/skills/orchestrate/SKILL.md" in names

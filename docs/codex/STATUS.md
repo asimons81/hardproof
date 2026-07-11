@@ -1,10 +1,10 @@
 # Crucible Codex Status
 
 - Current release: v0.2.0
-- Current release phase: Gatehouse Task 1 policy domain and migration 002
-- Last completed task: v0.2.0 Task 0 - freeze policy trace and stable-key contracts
-- Next task: v0.2.0 Task 1 - add policy domain models, migration 002, and repositories
-- Test status: 220 tests pass; Ruff and strict mypy pass
+- Current release phase: Gatehouse Task 2 deterministic terminal normalization
+- Last completed task: v0.2.0 Task 1 - policy ledgers and migration 002
+- Next task: v0.2.0 Task 2 - implement bounded cross-shell terminal normalization
+- Test status: 226 tests pass; Ruff and strict mypy pass; v1-to-v2 migration verified
 - Current branch: codex/v0.2.0
 - Current version: 0.1.0
 - Unresolved blockers: none

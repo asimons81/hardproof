@@ -5,11 +5,12 @@ from __future__ import annotations
 import sqlite3
 from importlib import resources
 
+from crucible_agent.constants import DATABASE_SCHEMA_VERSION
 from crucible_agent.domain.models import utc_now
 from crucible_agent.storage.database import Database
 
 
-LATEST_SCHEMA_VERSION = 1
+LATEST_SCHEMA_VERSION = DATABASE_SCHEMA_VERSION
 
 
 class MigrationError(RuntimeError):
@@ -48,8 +49,14 @@ def apply_migration_sql(connection: sqlite3.Connection, version: int, sql: str) 
 
 
 def _load(version: int) -> str:
-    name = f"{version:03d}_initial.sql"
-    return resources.files("crucible_agent.migrations").joinpath(name).read_text(encoding="utf-8")
+    directory = resources.files("crucible_agent.migrations")
+    matches = sorted(
+        (item for item in directory.iterdir() if item.name.startswith(f"{version:03d}_")),
+        key=lambda item: item.name,
+    )
+    if len(matches) != 1:
+        raise MigrationError(f"expected one migration for schema {version}; found {len(matches)}")
+    return matches[0].read_text(encoding="utf-8")
 
 
 def migrate(database: Database) -> tuple[int, ...]:

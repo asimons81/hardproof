@@ -10,7 +10,7 @@ from typing import Any
 
 import yaml
 
-from crucible_agent.constants import SCHEMA_VERSION
+from crucible_agent.constants import CONFIG_SCHEMA_VERSION
 from crucible_agent.domain.enums import RunProfile
 from crucible_agent.paths import safe_project_relative
 
@@ -48,7 +48,7 @@ class CrucibleConfig:
 
 
 DEFAULTS: dict[str, Any] = {
-    "schema_version": SCHEMA_VERSION,
+    "schema_version": CONFIG_SCHEMA_VERSION,
     "default_profile": "standard",
     "artifact_directory": ".crucible/runs",
     "verification_checks": [
@@ -111,7 +111,7 @@ def load_config(path: str | Path) -> CrucibleConfig:
     if unknown:
         raise ConfigError(f"unknown config keys: {', '.join(unknown)}")
     values = {**DEFAULTS, **supplied}
-    if values["schema_version"] != SCHEMA_VERSION:
+    if values["schema_version"] != CONFIG_SCHEMA_VERSION:
         raise ConfigError(f"unsupported config schema_version: {values['schema_version']}")
     try:
         profile = RunProfile(values["default_profile"])
@@ -133,7 +133,7 @@ def load_config(path: str | Path) -> CrucibleConfig:
     if not isinstance(maximum, int) or isinstance(maximum, bool) or maximum < 1:
         raise ConfigError("maximum_stored_output_size must be a positive integer")
     return CrucibleConfig(
-        schema_version=SCHEMA_VERSION,
+        schema_version=CONFIG_SCHEMA_VERSION,
         default_profile=profile,
         artifact_directory=_expand_path(values["artifact_directory"]),
         verification_checks=checks,

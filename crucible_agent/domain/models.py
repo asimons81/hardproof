@@ -321,3 +321,145 @@ class PolicyDecision(Serializable):
             raise ValueError("approval action must require human approval")
         if self.trace and self.trace[-1].rule_key != self.rule_key:
             raise ValueError("final trace rule must match decision rule_key")
+
+
+@dataclass(frozen=True, slots=True)
+class PolicyDecisionRecord(Serializable):
+    id: str
+    run_id: str
+    tool_name: str
+    action: str
+    rule_key: str
+    reason: str
+    trace: tuple[RuleTrace, ...]
+    arguments_sha256: str
+    config_sha256: str
+    waiver_id: str | None
+    suggested_risk: RiskLevel | None
+    created_at: str
+
+    _tuple_fields: ClassVar[tuple[str, ...]] = ("trace",)
+
+    def __post_init__(self) -> None:
+        for name in ("id", "run_id", "tool_name", "rule_key", "reason"):
+            _require_text(name, getattr(self, name))
+        if self.action not in {"allow", "block", "approval"}:
+            raise ValueError("action must be allow, block, or approval")
+        object.__setattr__(self, "trace", tuple(self.trace))
+        if not self.trace or self.trace[-1].rule_key != self.rule_key:
+            raise ValueError("final trace rule must match decision rule_key")
+        _validate_hash("arguments_sha256", self.arguments_sha256, (64,))
+        _validate_hash("config_sha256", self.config_sha256, (64,))
+        if self.suggested_risk is not None:
+            object.__setattr__(self, "suggested_risk", _enum(RiskLevel, self.suggested_risk))
+        object.__setattr__(self, "created_at", normalize_timestamp(self.created_at))
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> PolicyDecisionRecord:
+        values = dict(payload)
+        values["trace"] = tuple(
+            item if isinstance(item, RuleTrace) else RuleTrace(**item) for item in values["trace"]
+        )
+        return cls(**values)
+
+
+@dataclass(frozen=True, slots=True)
+class Waiver(Serializable):
+    id: str
+    run_id: str | None
+    name: str
+    rule_key: str
+    tool_name: str | None
+    command_sha256: str | None
+    path_scope: str | None
+    profile: RunProfile | None
+    stage: RunStage | None
+    rationale: str
+    actor: str
+    source: str
+    created_at: str
+    expires_at: str
+    revoked_at: str | None = None
+    revoked_by: str | None = None
+    revocation_reason: str | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("id", "name", "rule_key", "rationale", "actor", "source"):
+            _require_text(name, getattr(self, name))
+        if self.rule_key.startswith("terminal.immutable."):
+            raise ValueError("immutable rules cannot be waived")
+        if self.command_sha256 is not None:
+            _validate_hash("command_sha256", self.command_sha256, (64,))
+        if self.profile is not None:
+            object.__setattr__(self, "profile", _enum(RunProfile, self.profile))
+        if self.stage is not None:
+            object.__setattr__(self, "stage", _enum(RunStage, self.stage))
+        created = normalize_timestamp(self.created_at)
+        expires = normalize_timestamp(self.expires_at)
+        if expires <= created:
+            raise ValueError("waiver expiry must be after creation")
+        object.__setattr__(self, "created_at", created)
+        object.__setattr__(self, "expires_at", expires)
+        if self.revoked_at is not None:
+            object.__setattr__(self, "revoked_at", normalize_timestamp(self.revoked_at))
+            if not (self.revoked_by or "").strip() or not (self.revocation_reason or "").strip():
+                raise ValueError("revoked waiver requires actor and reason")
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> Waiver:
+        return cls(**payload)
+
+
+@dataclass(frozen=True, slots=True)
+class WaiverEvent(Serializable):
+    waiver_id: str
+    event_type: str
+    actor: str
+    source: str
+    rationale: str
+    created_at: str
+    sequence: int | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("waiver_id", "actor", "source", "rationale"):
+            _require_text(name, getattr(self, name))
+        if self.event_type not in {"created", "revoked", "expired"}:
+            raise ValueError("unknown waiver lifecycle event")
+        if self.sequence is not None and self.sequence < 1:
+            raise ValueError("waiver event sequence must be positive")
+        object.__setattr__(self, "created_at", normalize_timestamp(self.created_at))
+
+
+@dataclass(frozen=True, slots=True)
+class RiskSuggestion(Serializable):
+    id: str
+    run_id: str
+    task_id: str | None
+    suggested_risk: RiskLevel
+    reasons: tuple[str, ...]
+    accepted_risk: RiskLevel | None
+    override_rationale: str | None
+    created_at: str
+
+    _tuple_fields: ClassVar[tuple[str, ...]] = ("reasons",)
+
+    def __post_init__(self) -> None:
+        for name in ("id", "run_id"):
+            _require_text(name, getattr(self, name))
+        object.__setattr__(self, "suggested_risk", _enum(RiskLevel, self.suggested_risk))
+        object.__setattr__(self, "reasons", tuple(self.reasons))
+        if not self.reasons or any(not reason.strip() for reason in self.reasons):
+            raise ValueError("risk suggestion requires non-empty reasons")
+        if self.accepted_risk is not None:
+            object.__setattr__(self, "accepted_risk", _enum(RiskLevel, self.accepted_risk))
+            if self.accepted_risk is not self.suggested_risk and not (
+                self.override_rationale or ""
+            ).strip():
+                raise ValueError("risk override requires rationale")
+        object.__setattr__(self, "created_at", normalize_timestamp(self.created_at))
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> RiskSuggestion:
+        values = dict(payload)
+        values["reasons"] = tuple(values["reasons"])
+        return cls(**values)
