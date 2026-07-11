@@ -322,6 +322,15 @@ class PolicyDecision(Serializable):
         if self.trace and self.trace[-1].rule_key != self.rule_key:
             raise ValueError("final trace rule must match decision rule_key")
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> PolicyDecision:
+        values = dict(payload)
+        values["trace"] = tuple(
+            item if isinstance(item, RuleTrace) else RuleTrace(**item)
+            for item in values.get("trace", ())
+        )
+        return cls(**values)
+
 
 @dataclass(frozen=True, slots=True)
 class PolicyDecisionRecord(Serializable):

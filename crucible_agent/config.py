@@ -144,6 +144,8 @@ def _policy_rule(value: Any, index: int) -> PolicyRuleConfig:
     if effect not in {"allow", "deny", "approval"}:
         raise ConfigError(f"{location}.effect must be allow, deny, or approval")
     tools = _string_tuple(f"{location}.tools", value.get("tools"))
+    if len(tools) > 32:
+        raise ConfigError(f"{location}.tools cannot contain more than 32 entries")
     rationale = value.get("rationale")
     if not isinstance(rationale, str) or not rationale.strip():
         raise ConfigError(f"{location}.rationale must be non-empty")
@@ -193,6 +195,8 @@ def _policy(value: Any, default_profile: RunProfile) -> PolicyConfig:
     rules_value = value.get("rules", [])
     if not isinstance(rules_value, list):
         raise ConfigError("policy.rules must be a list")
+    if len(rules_value) > 128:
+        raise ConfigError("policy.rules cannot contain more than 128 entries")
     rules = tuple(_policy_rule(item, index) for index, item in enumerate(rules_value))
     if len({rule.key for rule in rules}) != len(rules):
         raise ConfigError("policy.rules keys must be unique")

@@ -15,6 +15,7 @@ def test_v02_policy_trace_is_immutable_ordered_and_serializable() -> None:
     )
     assert decision.trace == (entry,)
     assert decision.to_dict()["trace"] == [entry.to_dict()]
+    assert PolicyDecision.from_dict(decision.to_dict()) == decision
     with pytest.raises(FrozenInstanceError):
         entry.outcome = "waived"  # type: ignore[misc]
 
