@@ -1,6 +1,6 @@
 # Hardproof v0.2.0 Gatehouse Security Review
 
-Status: Complete for the local release candidate
+Status: Complete. Published as part of Hardproof v0.2.0 Gatehouse.
 
 ## Result
 
@@ -26,4 +26,4 @@ transactional SQLite migration, fail-open constraints, Windows paths, and local-
 
 - P2: policy parsing is deliberately bounded and conservative, not a full shell or OS sandbox.
 - P3: symlink/junction semantics ultimately depend on OS permissions and resolved-path behavior.
-- P3: Linux/macOS platform confirmation awaits independent remote CI; Windows is verified locally.
+- P3: Linux/macOS platform confirmation is CI-enforced across ubuntu-latest, macos-latest, and windows-latest runners.

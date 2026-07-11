@@ -8,44 +8,44 @@ Generated: 2026-07-11 | Baseline: 310 tests, Ruff pass, mypy strict pass
 
 | Surface | Old Value | New Value | Files Affected | Compatibility Requirement | Migration Requirement | Verification Method | Status |
 |---------|-----------|-----------|----------------|--------------------------|----------------------|---------------------|--------|
-| Product name | Crucible | Hardproof | All docs, README, CHANGELOG, ROADMAP, ADRs, codex docs | None (name change) | None | grep for "Crucible" in prose | PENDING |
-| Display wordmark | Crucible / CRUCIBLE | HARDPROOF | README, docs headers, reports | None | None | grep for "CRUCIBLE" | PENDING |
-| Python distribution | crucible-agent | hardproof | pyproject.toml, scripts/smoke_install.py, scripts/build_sbom.py, CI workflows, docs | pip install name changes | User must uninstall old, install new | `pip install hardproof` | PENDING |
-| Python import package | crucible_agent | hardproof | All 50 .py files, pyproject.toml [tool.setuptools], CI, tests (90 files) | Import path changes | None (new install) | `import hardproof` works | PENDING |
-| Package directory | crucible_agent/ | hardproof/ | Entire package tree rename | Directory rename | None | `ls hardproof/` | PENDING |
-| Plugin key | crucible | hardproof | plugin.yaml, constants.py, commands/cli.py, commands/slash.py, tools/handlers.py, all tests | Plugin registration | Users must `hermes plugins enable hardproof` | Plugin discovery | PENDING |
-| Entry point | crucible = crucible_agent.plugin | hardproof = hardproof.plugin | pyproject.toml [project.entry-points] | Entry point rename | None | `importlib.metadata.entry_points` | PENDING |
-| Slash command | /crucible | /hardproof | commands/slash.py, README, docs, tests | Slash command name | User muscle memory | `/hardproof status` | PENDING |
-| CLI command | hermes crucible | hermes hardproof | commands/cli.py, README, docs, tests | CLI command name | User muscle memory | `hermes hardproof status` | PENDING |
-| Tool names | crucible_run, crucible_record, crucible_task, crucible_transition, crucible_verify, crucible_report | hardproof_run, hardproof_record, hardproof_task, hardproof_transition, hardproof_verify, hardproof_report | tools/schemas.py, tools/handlers.py, plugin.yaml, all test files (~100 refs) | Tool name change | None (new install) | Tool registration verified | PENDING |
-| Toolset name | crucible | hardproof | tools/handlers.py (register_tools) | Toolset name | None | Toolset registered correctly | PENDING |
-| Configuration namespace | crucible | hardproof | config.py (class names), constants.py | Class name change | Existing .crucible/config.yaml continues working | Config load works | PENDING |
-| State directory | .crucible/ | .hardproof/ | paths.py, config.py, commands/shared.py, README, docs, tests (16 files) | New runs use .hardproof/ | Migration command required | New runs use .hardproof/ | PENDING |
-| Database file | .crucible/state/crucible.db | .hardproof/state/hardproof.db | paths.py, storage/*.py | Database path | Migration copies old DB | New DB at correct path | PENDING |
-| Environment variable prefix | CRUCIBLE_ | HARDPROOF_ | config.py (env expansion), tests | Env var prefix | None (new install) | HARDPROOF_ env vars work | PENDING |
-| Log prefix | [crucible] | [hardproof] | handlers.py (logger messages) | Log format | None | Log output says [hardproof] | PENDING |
-| Report heading | # Crucible Completion Report | # Hardproof Completion Report | services/reports.py line 203 | Report format | None | Report heading changed | PENDING |
-| Terminal banners | "CRUCIBLE RUN ACTIVE" etc. | "HARDPROOF RUN ACTIVE" etc. | hooks/context.py | Display text | None | Context banner says HARDPROOF | PENDING |
-| Skill namespace | crucible:orchestrate, etc. | hardproof:orchestrate, etc. | plugin.py, hooks/context.py, skill SKILL.md files (9 skills) | Skill namespace | None | `skill_view("hardproof:orchestrate")` works | PENDING |
-| Skill descriptions | "Crucible run" | "Hardproof run" | plugin.py (SKILL_DESCRIPTIONS) | Description text | None | Skill descriptions updated | PENDING |
-| GitHub repository | asimons81/crucible-agent | asimons81/hardproof | README, CI badges, CONTRIBUTING, SECURITY, SUPPORT, docs, workflows | Repo URL | User updates clone URL | Badge links resolve | PENDING |
-| CI workflow name | CI (ci.yml) | CI (unchanged) | .github/workflows/ci.yml | Workflow names | None | CI passes | PENDING |
-| Release workflow | release.yml | release.yml (unchanged) | .github/workflows/release.yml | Release automation | None | Release builds | PENDING |
-| SBOM metadata | name: crucible-agent | name: hardproof | scripts/build_sbom.py | SBOM metadata | None | SBOM generated correctly | PENDING |
-| Python wheel filename | crucible_agent-0.1.0-py3-none-any.whl | hardproof-0.1.0-py3-none-any.whl | CI smoke test references | Wheel name | None | Build produces correct name | PENDING |
-| Changelog title | Crucible Agent | Hardproof | CHANGELOG.md line 3 | Doc text | None | Title says Hardproof | PENDING |
-| ROADMAP title | Crucible ships by... | Hardproof ships by... | ROADMAP.md line 3 | Doc text | None | Title says Hardproof | PENDING |
-| ADR titles | (various Crucible references) | (Hardproof equivalents) | docs/adr/*.md (6 files) | Doc text | None | ADR references updated | PENDING |
-| Codex docs | Crucible references throughout | Hardproof equivalents | docs/codex/*.md (~12 files) | Doc text | None | Codex docs updated | PENDING |
-| Issue templates | Crucible references | Hardproof equivalents | .github/ISSUE_TEMPLATE/*.yml | Template text | None | Templates updated | PENDING |
-| PR template | (any Crucible references) | Hardproof equivalents | .github/pull_request_template.md | Template text | None | PR template updated | PENDING |
-| CODEOWNERS | (any Crucible references) | Hardproof equivalents | .github/CODEOWNERS | Owner references | None | CODEOWNERS updated | PENDING |
-| Migration SQL files | crucible_agent.migrations path | hardproof.migrations path | storage/migrations.py | Import path | None | Migration loads correct SQL | PENDING |
-| Package data includes | crucible_agent = [...] | hardproof = [...] | pyproject.toml [tool.setuptools.package-data] | Package data | None | Skills/templates included in wheel | PENDING |
-| License NOTICE | Crucible Agent contributors | Hardproof contributors | NOTICE | Attribution text | None | NOTICE updated | PENDING |
-| Image filenames/alt text | (any Crucible references) | Hardproof equivalents | docs/, README | Image metadata | None | Images updated | PENDING |
-| Badge alt text | Crucible Agent CI | Hardproof CI | README.md | Badge alt text | None | Badge alt text updated | PENDING |
-| pip-audit reference | crucible-agent | hardproof | CI workflow (pip-audit) | Audit target | None | pip-audit passes | PENDING |
+| Product name | Crucible | Hardproof | All docs, README, CHANGELOG, ROADMAP, ADRs, codex docs | None (name change) | None | grep for "Crucible" in prose | COMPLETE |
+| Display wordmark | Crucible / CRUCIBLE | HARDPROOF | README, docs headers, reports | None | None | grep for "CRUCIBLE" | COMPLETE |
+| Python distribution | crucible-agent | hardproof | pyproject.toml, scripts/smoke_install.py, scripts/build_sbom.py, CI workflows, docs | pip install name changes | User must uninstall old, install new | `pip install hardproof` | COMPLETE |
+| Python import package | crucible_agent | hardproof | All 50 .py files, pyproject.toml [tool.setuptools], CI, tests (90 files) | Import path changes | None (new install) | `import hardproof` works | COMPLETE |
+| Package directory | crucible_agent/ | hardproof/ | Entire package tree rename | Directory rename | None | `ls hardproof/` | COMPLETE |
+| Plugin key | crucible | hardproof | plugin.yaml, constants.py, commands/cli.py, commands/slash.py, tools/handlers.py, all tests | Plugin registration | Users must `hermes plugins enable hardproof` | Plugin discovery | COMPLETE |
+| Entry point | crucible = crucible_agent.plugin | hardproof = hardproof.plugin | pyproject.toml [project.entry-points] | Entry point rename | None | `importlib.metadata.entry_points` | COMPLETE |
+| Slash command | /crucible | /hardproof | commands/slash.py, README, docs, tests | Slash command name | User muscle memory | `/hardproof status` | COMPLETE |
+| CLI command | hermes crucible | hermes hardproof | commands/cli.py, README, docs, tests | CLI command name | User muscle memory | `hermes hardproof status` | COMPLETE |
+| Tool names | crucible_run, crucible_record, crucible_task, crucible_transition, crucible_verify, crucible_report | hardproof_run, hardproof_record, hardproof_task, hardproof_transition, hardproof_verify, hardproof_report | tools/schemas.py, tools/handlers.py, plugin.yaml, all test files (~100 refs) | Tool name change | None (new install) | Tool registration verified | COMPLETE |
+| Toolset name | crucible | hardproof | tools/handlers.py (register_tools) | Toolset name | None | Toolset registered correctly | COMPLETE |
+| Configuration namespace | crucible | hardproof | config.py (class names), constants.py | Class name change | Existing .crucible/config.yaml continues working | Config load works | COMPLETE |
+| State directory | .crucible/ | .hardproof/ | paths.py, config.py, commands/shared.py, README, docs, tests (16 files) | New runs use .hardproof/ | Migration command required | New runs use .hardproof/ | COMPLETE |
+| Database file | .crucible/state/crucible.db | .hardproof/state/hardproof.db | paths.py, storage/*.py | Database path | Migration copies old DB | New DB at correct path | COMPLETE |
+| Environment variable prefix | CRUCIBLE_ | HARDPROOF_ | config.py (env expansion), tests | Env var prefix | None (new install) | HARDPROOF_ env vars work | COMPLETE |
+| Log prefix | [crucible] | [hardproof] | handlers.py (logger messages) | Log format | None | Log output says [hardproof] | COMPLETE |
+| Report heading | # Crucible Completion Report | # Hardproof Completion Report | services/reports.py line 203 | Report format | None | Report heading changed | COMPLETE |
+| Terminal banners | "CRUCIBLE RUN ACTIVE" etc. | "HARDPROOF RUN ACTIVE" etc. | hooks/context.py | Display text | None | Context banner says HARDPROOF | COMPLETE |
+| Skill namespace | crucible:orchestrate, etc. | hardproof:orchestrate, etc. | plugin.py, hooks/context.py, skill SKILL.md files (9 skills) | Skill namespace | None | `skill_view("hardproof:orchestrate")` works | COMPLETE |
+| Skill descriptions | "Crucible run" | "Hardproof run" | plugin.py (SKILL_DESCRIPTIONS) | Description text | None | Skill descriptions updated | COMPLETE |
+| GitHub repository | asimons81/crucible-agent | asimons81/hardproof | README, CI badges, CONTRIBUTING, SECURITY, SUPPORT, docs, workflows | Repo URL | User updates clone URL | Badge links resolve | COMPLETE |
+| CI workflow name | CI (ci.yml) | CI (unchanged) | .github/workflows/ci.yml | Workflow names | None | CI passes | COMPLETE |
+| Release workflow | release.yml | release.yml (unchanged) | .github/workflows/release.yml | Release automation | None | Release builds | COMPLETE |
+| SBOM metadata | name: crucible-agent | name: hardproof | scripts/build_sbom.py | SBOM metadata | None | SBOM generated correctly | COMPLETE |
+| Python wheel filename | crucible_agent-0.1.0-py3-none-any.whl | hardproof-0.1.0-py3-none-any.whl | CI smoke test references | Wheel name | None | Build produces correct name | COMPLETE |
+| Changelog title | Crucible Agent | Hardproof | CHANGELOG.md line 3 | Doc text | None | Title says Hardproof | COMPLETE |
+| ROADMAP title | Crucible ships by... | Hardproof ships by... | ROADMAP.md line 3 | Doc text | None | Title says Hardproof | COMPLETE |
+| ADR titles | (various Crucible references) | (Hardproof equivalents) | docs/adr/*.md (6 files) | Doc text | None | ADR references updated | COMPLETE |
+| Codex docs | Crucible references throughout | Hardproof equivalents | docs/codex/*.md (~12 files) | Doc text | None | Codex docs updated | COMPLETE |
+| Issue templates | Crucible references | Hardproof equivalents | .github/ISSUE_TEMPLATE/*.yml | Template text | None | Templates updated | COMPLETE |
+| PR template | (any Crucible references) | Hardproof equivalents | .github/pull_request_template.md | Template text | None | PR template updated | COMPLETE |
+| CODEOWNERS | (any Crucible references) | Hardproof equivalents | .github/CODEOWNERS | Owner references | None | CODEOWNERS updated | COMPLETE |
+| Migration SQL files | crucible_agent.migrations path | hardproof.migrations path | storage/migrations.py | Import path | None | Migration loads correct SQL | COMPLETE |
+| Package data includes | crucible_agent = [...] | hardproof = [...] | pyproject.toml [tool.setuptools.package-data] | Package data | None | Skills/templates included in wheel | COMPLETE |
+| License NOTICE | Crucible Agent contributors | Hardproof contributors | NOTICE | Attribution text | None | NOTICE updated | COMPLETE |
+| Image filenames/alt text | (any Crucible references) | Hardproof equivalents | docs/, README | Image metadata | None | Images updated | COMPLETE |
+| Badge alt text | Crucible Agent CI | Hardproof CI | README.md | Badge alt text | None | Badge alt text updated | COMPLETE |
+| pip-audit reference | crucible-agent | hardproof | CI workflow (pip-audit) | Audit target | None | pip-audit passes | COMPLETE |
 
 ## State Directory Migration Details
 

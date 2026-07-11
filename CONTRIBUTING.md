@@ -8,6 +8,10 @@ Open an issue for substantial behavior or public-contract changes. Use an RFC is
 
 Preserve the clean-room boundary in `INSPIRATION.md`. Do not copy source, skill prose, prompts, fixtures, diagrams, templates, layout, or documentation wording from other workflow projects.
 
+## Coding agents
+
+Coding agents (Hermes Agent, Claude Code, etc.) should read `AGENTS.md` and the relevant nested `AGENTS.md` files before making changes. See `docs/hermes-agent-guide.md` for detailed instructions.
+
 ## Development
 
 Use Python 3.11 or newer. Install development dependencies with `python -m pip install -e ".[dev]"`, then run:
@@ -17,7 +21,7 @@ python -m pytest
 python -m ruff check hardproof tests scripts
 python -m mypy hardproof
 python -m build
-python -m twine check dist/*
+python -m twine check dist/*.whl dist/*.tar.gz
 ```
 
 Add tests for both allowed and refusal paths. Never weaken a gate to make a test pass. Keep commits coherent, secret-free, and buildable. Conventional subjects are encouraged but not required for external contributors. Pull requests are squash-merged by default.
@@ -45,5 +49,5 @@ Verify a release tag locally:
 ```bash
 git config gpg.format ssh
 git config gpg.ssh.allowedSignersFile .github/release-signers
-git tag -v v0.1.1
+git tag -v vX.Y.Z
 ```
