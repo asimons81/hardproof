@@ -254,6 +254,20 @@ class RunRepository:
             tasks.append(Task.from_dict(payload))
         return tuple(tasks)
 
+    def update_task(self, task: Task) -> None:
+        with self.database.connect() as connection:
+            cursor = connection.execute(
+                """UPDATE tasks SET status=?, risk=?, dependencies_json=?, acceptance_json=?,
+                    files_json=?, acceptance_notes=?, updated_at=? WHERE id=? AND run_id=?""",
+                (
+                    task.status.value, task.risk.value, json.dumps(task.dependencies),
+                    json.dumps(task.acceptance), json.dumps(task.files), task.acceptance_notes,
+                    task.updated_at, task.id, task.run_id,
+                ),
+            )
+        if cursor.rowcount != 1:
+            raise LookupError(f"task not found: {task.task_key}")
+
     def add_verification_check(self, check: VerificationCheck) -> None:
         with self.database.connect() as connection:
             connection.execute(
