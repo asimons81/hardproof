@@ -38,7 +38,7 @@ class LocalPytestRunner:
     def run(self, command: str, timeout_seconds: int) -> CommandResult:
         assert command == "python -m pytest"
         completed = subprocess.run(
-            [sys.executable, "-m", "pytest", "-q"],
+            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider"],
             cwd=self.project_root,
             capture_output=True,
             text=True,
