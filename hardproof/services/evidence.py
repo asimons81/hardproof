@@ -96,7 +96,7 @@ def evidence_with_freshness(
     for record in records:
         stored = WorkspaceSnapshot(record.head_sha, record.diff_sha256, record.untracked_sha256)
         adjusted.append(
-            record if stored == current or record.status is not EvidenceStatus.PASSED
+            record if stored.matches_workspace(current) or record.status is not EvidenceStatus.PASSED
             else replace(record, status=EvidenceStatus.STALE)
         )
     return tuple(adjusted)
@@ -197,9 +197,9 @@ class EvidenceService:
         if evidence.status is not EvidenceStatus.PASSED or evidence.exit_code != 0:
             return False
         current = self.snapshotter(self.project_root)
-        return current == WorkspaceSnapshot(
+        return current.matches_workspace(WorkspaceSnapshot(
             evidence.head_sha, evidence.diff_sha256, evidence.untracked_sha256
-        )
+        ))
 
     def freshness_status(self, evidence: Evidence) -> EvidenceStatus:
         return evidence.status if self.is_fresh(evidence) else (

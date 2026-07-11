@@ -25,6 +25,17 @@ class WorkspaceSnapshot:
         _digest("diff_sha256", self.diff_sha256, (64,))
         _digest("untracked_sha256", self.untracked_sha256, (64,))
 
+    def matches_workspace(self, other: WorkspaceSnapshot) -> bool:
+        """Compare only HEAD and tracked-file diff; ignore untracked noise.
+
+        Untracked files (cache dirs, bytecode, editor temp files) are not
+        part of the workspace identity that affects verification-evidence
+        validity.  Two snapshots with the same HEAD and tracked-tree diff
+        represent the same workspace regardless of what untracked files
+        happen to exist.
+        """
+        return self.head_sha == other.head_sha and self.diff_sha256 == other.diff_sha256
+
     def to_dict(self) -> dict[str, str]:
         return {
             "head_sha": self.head_sha,
