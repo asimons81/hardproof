@@ -18,7 +18,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          fetch-tags: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -29,7 +28,7 @@ jobs:
           git config gpg.format ssh
           git config gpg.ssh.allowedSignersFile "$GITHUB_WORKSPACE/.github/release-signers"
       - name: Fetch tag object for verification
-        run: git fetch origin tag "${GITHUB_REF_NAME}" --no-tags
+        run: git fetch origin "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}" --no-tags
       - name: Verify signed tag
         run: git tag -v "${GITHUB_REF_NAME}"
       - name: Verify commit is on main
