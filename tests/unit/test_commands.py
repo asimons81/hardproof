@@ -92,6 +92,7 @@ def test_slash_and_cli_use_same_command_service_output(tmp_path: Path) -> None:
         ["config", "init"], ["config", "validate"], ["db", "migrate"], ["complete"],
         ["policy", "waivers", "list"],
         ["policy", "explain", "--tool", "terminal", "--args-json", "{}"],
+        ["policy", "suggest-risk", "--text", "change"],
     ],
 )
 def test_cli_parser_accepts_every_documented_subcommand(argv: list[str]) -> None:

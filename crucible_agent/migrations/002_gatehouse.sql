@@ -64,6 +64,13 @@ CREATE TABLE risk_suggestions (
     accepted_risk TEXT,
     override_rationale TEXT,
     created_at TEXT NOT NULL,
+    accepted_by TEXT,
+    accepted_source TEXT,
+    decided_at TEXT,
+    CHECK(
+        (accepted_risk IS NULL AND accepted_by IS NULL AND accepted_source IS NULL AND decided_at IS NULL)
+        OR (accepted_risk IS NOT NULL AND accepted_by IS NOT NULL AND accepted_source IS NOT NULL AND decided_at IS NOT NULL)
+    ),
     CHECK(accepted_risk IS NULL OR accepted_risk = suggested_risk OR length(trim(override_rationale)) > 0)
 );
 CREATE INDEX risk_suggestions_run_sequence ON risk_suggestions(run_id, sequence);

@@ -50,13 +50,20 @@ def test_record_handler_writes_artifacts_but_never_approvals(tmp_path: Path) -> 
 
 
 def test_task_create_update_list_get(tmp_path: Path) -> None:
-    handlers = create_handlers(dependencies(tmp_path))
+    deps = dependencies(tmp_path)
+    handlers = create_handlers(deps)
     call(handlers["crucible_run"], {"action": "start", "profile": "quick", "request": "Task test"})
     created = call(handlers["crucible_task"], {
         "action": "create", "key": "T1", "title": "Implement", "description": "Make change",
         "risk": "low", "acceptance": ["test passes"],
     })
     assert created["task"]["key"] == "T1"
+    assert created["risk_suggestion"]["decision_required"] is True
+    assert created["risk_suggestion"]["selected_task_risk_unchanged"] == "low"
+    stored_risks = deps.command_service.repository.list_risk_suggestions(
+        deps.command_service.active_run_id()
+    )
+    assert len(stored_risks) == 1 and stored_risks[0].task_id is not None
     listed = call(handlers["crucible_task"], {"action": "list"})
     assert listed["tasks"][0]["key"] == "T1"
     fetched = call(handlers["crucible_task"], {"action": "get", "key": "T1"})

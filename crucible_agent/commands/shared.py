@@ -16,7 +16,7 @@ import yaml
 
 from crucible_agent.compat import inspect_context
 from crucible_agent.config import DEFAULTS, ConfigError, config_fingerprint, load_config
-from crucible_agent.domain.enums import ApprovalGate, RunProfile, RunStage
+from crucible_agent.domain.enums import ApprovalGate, RiskLevel, RunProfile, RunStage
 from crucible_agent.domain.models import Run, SessionBinding, VerificationCheck, new_id, utc_now
 from crucible_agent.paths import ProjectPaths
 from crucible_agent.policy.stage_rules import TransitionFacts
@@ -25,6 +25,7 @@ from crucible_agent.services.approvals import ApprovalService
 from crucible_agent.services.evidence import evidence_with_freshness
 from crucible_agent.services.runs import RunService
 from crucible_agent.services.reports import ReportService
+from crucible_agent.services.risks import RiskService
 from crucible_agent.services.waivers import WaiverService
 from crucible_agent.storage.database import Database, DatabaseCorruptionError
 from crucible_agent.storage.migrations import MigrationError, migrate
@@ -278,9 +279,13 @@ class CommandService:
     def _status(self, rest: list[str]) -> CommandResult:
         self._expect_no_args("status", rest)
         run = self.repository.get_run(self.active_run_id())
+        pending_risks = sum(
+            item.accepted_risk is None for item in self.repository.list_risk_suggestions(run.id)
+        )
         return CommandResult(
             True,
-            f"Run: {run.id}\nProfile: {run.profile.value}\nStage: {run.stage.value}\nStatus: {run.status.value}",
+            f"Run: {run.id}\nProfile: {run.profile.value}\nStage: {run.stage.value}\n"
+            f"Status: {run.status.value}\nPending risk suggestions: {pending_risks}",
             run.id,
         )
 
@@ -441,6 +446,58 @@ class CommandService:
         return options
 
     def _policy(self, rest: list[str]) -> CommandResult:
+        if rest and rest[0] == "suggest-risk":
+            options = self._command_options(
+                rest[1:], frozenset({"--text", "--files", "--command", "--format"})
+            )
+            text_value = options.get("--text")
+            if not isinstance(text_value, str) or not text_value.strip():
+                raise ValueError("policy suggest-risk requires --text")
+            files_value = str(options.get("--files", ""))
+            files = tuple(item.strip() for item in files_value.split(",") if item.strip())
+            suggestion = RiskService(self.repository).suggest(
+                self.active_run_id(), text=text_value, files=files,
+                command=str(options["--command"]) if "--command" in options else None,
+                now=utc_now(),
+            )
+            payload = {
+                "id": suggestion.id,
+                "suggested_risk": suggestion.suggested_risk.value,
+                "reasons": list(suggestion.reasons),
+                "decision_required": True,
+            }
+            format_value = str(options.get("--format", "human"))
+            if format_value == "json":
+                text = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+            elif format_value == "human":
+                text = (
+                    f"Suggested risk: {suggestion.suggested_risk.value}\n"
+                    f"Reasons: {', '.join(suggestion.reasons)}\n"
+                    f"Suggestion ID: {suggestion.id}\nHuman decision: pending"
+                )
+            else:
+                raise ValueError("policy suggest-risk --format must be human or json")
+            return CommandResult(True, text, self.active_run_id())
+        if len(rest) >= 2 and rest[:2] == ["risk", "decide"]:
+            if len(rest) < 3:
+                raise ValueError(
+                    "usage: policy risk decide <suggestion-id> --risk <level> [--reason <text>]"
+                )
+            options = self._command_options(rest[3:], frozenset({"--risk", "--reason"}))
+            risk_value = options.get("--risk")
+            if not isinstance(risk_value, str):
+                raise ValueError("policy risk decide requires --risk")
+            decided = RiskService(self.repository).decide_human(
+                rest[2], accepted_risk=RiskLevel(risk_value),
+                actor=self.context.actor, source=self.context.source,
+                rationale=str(options["--reason"]) if "--reason" in options else None,
+                now=utc_now(),
+            )
+            assert decided.accepted_risk is not None
+            return CommandResult(
+                True, f"Risk suggestion decided: {decided.accepted_risk.value}.",
+                self.active_run_id(),
+            )
         if rest and rest[0] == "explain":
             options = self._command_options(
                 rest[1:], frozenset({"--event", "--tool", "--args-json", "--format"})

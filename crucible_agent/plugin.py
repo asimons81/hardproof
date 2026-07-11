@@ -19,6 +19,7 @@ from crucible_agent.hooks.verification import VerificationHook, register_verific
 from crucible_agent.services.evidence import EvidenceService, HermesCommandRunner
 from crucible_agent.services.sessions import SessionService
 from crucible_agent.services.reports import ReportService
+from crucible_agent.services.risks import classify_risk
 from crucible_agent.tools.handlers import HandlerDependencies, register_tools
 
 
@@ -98,6 +99,18 @@ def register(ctx: Any) -> None:
 
         def report(args: dict[str, Any]) -> dict[str, Any]:
             action = str(args.get("action", "status"))
+            if action == "risk_suggest":
+                assessment = classify_risk(
+                    text=str(args.get("text", "")),
+                    files=tuple(str(item) for item in (args.get("files") or ())),
+                    command=str(args["command"]) if args.get("command") else None,
+                )
+                return {
+                    "ok": True, "action": action,
+                    "suggested_risk": assessment.level.value,
+                    "reasons": list(assessment.reasons),
+                    "advisory": True,
+                }
             if action == "policy_explain":
                 raw_arguments = args.get("arguments")
                 arguments = raw_arguments if isinstance(raw_arguments, dict) else {}

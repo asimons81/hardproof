@@ -25,3 +25,4 @@ def test_model_tools_have_no_human_approval_action() -> None:
     assert "waivers_create" not in serialized
     report_actions = TOOL_SCHEMAS["crucible_report"]["parameters"]["properties"]["action"]["enum"]
     assert "policy_explain" in report_actions
+    assert "risk_suggest" in report_actions

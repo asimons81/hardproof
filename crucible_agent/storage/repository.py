@@ -22,7 +22,7 @@ from crucible_agent.domain.models import (
     WaiverEvent,
     utc_now,
 )
-from crucible_agent.domain.enums import RunStage, RunStatus
+from crucible_agent.domain.enums import RiskLevel, RunStage, RunStatus
 from crucible_agent.storage.database import Database
 
 
@@ -486,13 +486,14 @@ class RunRepository:
             connection.execute(
                 """INSERT INTO risk_suggestions(
                     id, run_id, task_id, suggested_risk, reasons_json, accepted_risk,
-                    override_rationale, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    override_rationale, created_at, accepted_by, accepted_source, decided_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     suggestion.id, suggestion.run_id, suggestion.task_id,
                     suggestion.suggested_risk.value, json.dumps(suggestion.reasons),
                     suggestion.accepted_risk.value if suggestion.accepted_risk else None,
                     suggestion.override_rationale, suggestion.created_at,
+                    suggestion.accepted_by, suggestion.accepted_source, suggestion.decided_at,
                 ),
             )
 
@@ -508,6 +509,38 @@ class RunRepository:
             payload["reasons"] = json.loads(payload.pop("reasons_json"))
             suggestions.append(RiskSuggestion.from_dict(payload))
         return tuple(suggestions)
+
+    def get_risk_suggestion(self, suggestion_id: str) -> RiskSuggestion:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM risk_suggestions WHERE id=?", (suggestion_id,)
+            ).fetchone()
+        if row is None:
+            raise LookupError(f"risk suggestion not found: {suggestion_id}")
+        payload = dict(row)
+        payload.pop("sequence")
+        payload["reasons"] = json.loads(payload.pop("reasons_json"))
+        return RiskSuggestion.from_dict(payload)
+
+    def decide_risk_suggestion(
+        self,
+        suggestion_id: str,
+        accepted_risk: RiskLevel,
+        rationale: str,
+        actor: str,
+        source: str,
+        now: str,
+    ) -> RiskSuggestion:
+        with self.database.connect() as connection:
+            cursor = connection.execute(
+                """UPDATE risk_suggestions SET accepted_risk=?, override_rationale=?,
+                accepted_by=?, accepted_source=?, decided_at=?
+                WHERE id=? AND accepted_risk IS NULL""",
+                (accepted_risk.value, rationale or None, actor, source, now, suggestion_id),
+            )
+        if cursor.rowcount != 1:
+            raise ValueError("risk suggestion not found or already decided")
+        return self.get_risk_suggestion(suggestion_id)
 
     def _list_models(self, sql: str, run_id: str, model: Any) -> tuple[Any, ...]:
         with self.database.connect() as connection:

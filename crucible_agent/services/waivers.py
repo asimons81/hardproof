@@ -8,18 +8,12 @@ from pathlib import PurePosixPath
 from crucible_agent.domain.enums import RunProfile, RunStage
 from crucible_agent.domain.models import Waiver, new_id
 from crucible_agent.policy.waivers import WaiverScope, is_protected_rule, match_waiver
+from crucible_agent.services.authority import require_human
 from crucible_agent.services.evidence import redact_output
 from crucible_agent.storage.repository import RunRepository
 
 
-HUMAN_SOURCES = frozenset({"slash", "cli", "gateway", "desktop", "telegram", "discord", "slack"})
-NON_HUMAN_ACTORS = frozenset({"agent", "assistant", "model", "codex", "hermes"})
 _NAME = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
-
-
-def _require_human(actor: str, source: str) -> None:
-    if source.lower() not in HUMAN_SOURCES or actor.lower() in NON_HUMAN_ACTORS:
-        raise PermissionError("policy waiver mutation requires an attributable human surface")
 
 
 class WaiverService:
@@ -43,7 +37,7 @@ class WaiverService:
         profile: RunProfile | None = None,
         stage: RunStage | None = None,
     ) -> Waiver:
-        _require_human(actor, source)
+        require_human(actor, source, "policy waiver mutation")
         if not _NAME.fullmatch(name):
             raise ValueError("waiver name must use lowercase letters, numbers, and hyphens")
         if is_protected_rule(rule_key):
@@ -72,7 +66,7 @@ class WaiverService:
     def revoke_human(
         self, name: str, *, actor: str, source: str, reason: str, now: str
     ) -> Waiver:
-        _require_human(actor, source)
+        require_human(actor, source, "policy waiver mutation")
         if not reason.strip():
             raise ValueError("waiver revocation requires a reason")
         return self.repository.revoke_waiver(

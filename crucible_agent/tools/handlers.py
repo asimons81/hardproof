@@ -10,9 +10,11 @@ from typing import Any, Callable
 
 from crucible_agent.commands.shared import CommandService
 from crucible_agent.domain.enums import ArtifactKind, RiskLevel, RunStage, TaskStatus
+from crucible_agent.domain.models import utc_now
 from crucible_agent.services.artifacts import ArtifactService
 from crucible_agent.services.decisions import DecisionService
 from crucible_agent.services.tasks import TaskService
+from crucible_agent.services.risks import RiskService
 from crucible_agent.tools.schemas import TOOL_SCHEMAS
 
 
@@ -160,7 +162,24 @@ def create_handlers(dependencies: HandlerDependencies) -> dict[str, Callable[...
                 dependencies=tuple(args.get("dependencies") or ()),
                 acceptance=tuple(args.get("acceptance") or ()), files=tuple(args.get("files") or ()),
             )
-            return {"ok": True, "task": _task_payload(item)}
+            suggestion = RiskService(service.repository).suggest(
+                run_id,
+                text=f"{item.title}\n{item.description}",
+                files=item.files,
+                task_id=item.id,
+                now=utc_now(),
+            )
+            return {
+                "ok": True,
+                "task": _task_payload(item),
+                "risk_suggestion": {
+                    "id": suggestion.id,
+                    "suggested_risk": suggestion.suggested_risk.value,
+                    "reasons": list(suggestion.reasons),
+                    "decision_required": True,
+                    "selected_task_risk_unchanged": item.risk.value,
+                },
+            }
         if action == "update":
             status = TaskStatus(args["status"]) if args.get("status") else None
             item = tasks.update(

@@ -453,6 +453,9 @@ class RiskSuggestion(Serializable):
     accepted_risk: RiskLevel | None
     override_rationale: str | None
     created_at: str
+    accepted_by: str | None = None
+    accepted_source: str | None = None
+    decided_at: str | None = None
 
     _tuple_fields: ClassVar[tuple[str, ...]] = ("reasons",)
 
@@ -469,6 +472,11 @@ class RiskSuggestion(Serializable):
                 self.override_rationale or ""
             ).strip():
                 raise ValueError("risk override requires rationale")
+            if not (self.accepted_by or "").strip() or not (self.accepted_source or "").strip() or self.decided_at is None:
+                raise ValueError("risk decision requires attributed actor, source, and time")
+            object.__setattr__(self, "decided_at", normalize_timestamp(self.decided_at))
+        elif any(value is not None for value in (self.accepted_by, self.accepted_source, self.decided_at)):
+            raise ValueError("undecided risk suggestion cannot contain decision attribution")
         object.__setattr__(self, "created_at", normalize_timestamp(self.created_at))
 
     @classmethod

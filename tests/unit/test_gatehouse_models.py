@@ -42,6 +42,6 @@ def test_risk_suggestion_round_trips_override_rationale() -> None:
     suggestion = RiskSuggestion(
         "risk-1", "run-1", "task-1", RiskLevel.HIGH,
         ("migration path", "database command"), RiskLevel.CRITICAL,
-        "production database", NOW,
+        "production database", NOW, "person", "cli", NOW,
     )
     assert RiskSuggestion.from_dict(suggestion.to_dict()) == suggestion
