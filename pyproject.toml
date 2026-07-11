@@ -62,3 +62,9 @@ python_version = "3.11"
 strict = true
 packages = ["hardproof"]
 explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+warn_unused_ignores = false
