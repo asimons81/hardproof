@@ -448,10 +448,10 @@ class CommandService:
         return options
 
     def _migrate_state(self, rest: list[str]) -> CommandResult:
-        """Migrate a pre-rename .hardproof state directory to .hardproof."""
+        """Migrate a pre-rename .crucible state directory to .hardproof."""
         self._expect_no_args("migrate-state", rest)
         project = self.context.project_root
-        old_dir = project / ".hardproof"
+        old_dir = project / ".crucible"
         new_dir = project / ".hardproof"
         backup_dir = project / ".hardproof.backup"
 
