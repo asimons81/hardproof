@@ -466,11 +466,25 @@ class CommandService:
             )
 
         if new_exists and old_exists:
-            return CommandResult(
-                False,
-                f"Both {old_dir} and {new_dir} exist. Hardproof will not merge state stores. "
-                f"Resolve manually: remove one directory, or back up and remove .hardproof before migrating."
-            )
+            # CommandService.__init__ may have auto-created .hardproof/state/.
+            # If the new directory is empty aside from that skeleton, remove it
+            # so migration can proceed.
+            auto_created = True
+            for item in new_dir.rglob("*"):
+                rel = item.relative_to(new_dir)
+                parts = rel.parts
+                if parts[0] == "state" and len(parts) <= 2:
+                    continue  # state/ or state/hardproof.db*
+                auto_created = False
+                break
+            if auto_created:
+                shutil.rmtree(new_dir, ignore_errors=True)
+            else:
+                return CommandResult(
+                    False,
+                    f"Both {old_dir} and {new_dir} exist and {new_dir} has active state. "
+                    f"Resolve manually: remove one directory before migrating."
+                )
 
         if new_exists and not old_exists:
             return CommandResult(False, f"{new_dir} already exists. Nothing to migrate.")
