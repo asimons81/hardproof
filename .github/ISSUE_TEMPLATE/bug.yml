@@ -1,0 +1,27 @@
+name: Bug report
+description: Report reproducible incorrect Crucible behavior
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Remove secrets and private data before submitting.
+  - type: input
+    id: versions
+    attributes:
+      label: Versions and platform
+      description: Crucible, Hermes, Python, and operating-system versions
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Minimal commands, state, expected behavior, and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: Relevant logs, reports, or test output with secrets removed
