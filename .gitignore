@@ -7,6 +7,16 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
+venv/
 build/
 dist/
 .hardproof/
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
