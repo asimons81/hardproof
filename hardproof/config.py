@@ -15,6 +15,7 @@ import yaml
 from hardproof.constants import CONFIG_SCHEMA_VERSION
 from hardproof.domain.enums import RunProfile, RunStage
 from hardproof.paths import safe_project_relative
+from hardproof.policy.stage_graph import StageGraphError, compile_stage_graph
 
 
 class ConfigError(ValueError):
@@ -207,8 +208,12 @@ def _policy(value: Any, default_profile: RunProfile) -> PolicyConfig:
     if len(set(packs)) != len(packs):
         raise ConfigError("policy.packs must not contain duplicates")
     stage_graph = value.get("stage_graph", {})
-    if not isinstance(stage_graph, dict):
-        raise ConfigError("policy.stage_graph must be a mapping")
+    try:
+        compile_stage_graph(stage_graph, profile=default_profile)
+        for profile in RunProfile:
+            compile_stage_graph(stage_graph, profile=profile)
+    except StageGraphError as exc:
+        raise ConfigError(str(exc)) from exc
     return PolicyConfig(mode, rules, packs, dict(stage_graph))
 
 

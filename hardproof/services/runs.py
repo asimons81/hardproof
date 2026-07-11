@@ -8,11 +8,18 @@ from hardproof.domain.transitions import FORWARD_STAGE
 from hardproof.errors import TransitionError
 from hardproof.policy.stage_rules import TransitionFacts, evaluate_transition
 from hardproof.storage.repository import RunRepository
+from hardproof.policy.stage_graph import StageGraph, compile_stage_graph
+from typing import Any
 
 
 class RunService:
-    def __init__(self, repository: RunRepository) -> None:
+    def __init__(
+        self, repository: RunRepository, stage_graph: StageGraph | None = None,
+        *, stage_graph_config: dict[str, Any] | None = None,
+    ) -> None:
         self.repository = repository
+        self.stage_graph = stage_graph
+        self.stage_graph_config = stage_graph_config
 
     def try_transition(
         self,
@@ -24,7 +31,10 @@ class RunService:
         skip_reason: str | None = None,
     ) -> TransitionResult:
         run = self.repository.get_run(run_id)
-        result = evaluate_transition(run, target, facts, skip_reason=skip_reason)
+        graph = self.stage_graph
+        if self.stage_graph_config is not None:
+            graph = compile_stage_graph(self.stage_graph_config, profile=run.profile)
+        result = evaluate_transition(run, target, facts, skip_reason=skip_reason, stage_graph=graph)
         if not result.allowed:
             return result
         audit_events: tuple[tuple[str, dict[str, object]], ...] = ()
