@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
+import shutil
+import sqlite3
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -146,6 +149,7 @@ class CommandService:
             "abort": self._abort, "evidence": self._evidence, "export": self._export,
             "doctor": self._doctor, "runs": self._runs, "show": self._show,
             "config": self._config, "db": self._db, "complete": self._complete,
+            "migrate-state": self._migrate_state,
         }
         if command not in handlers:
             raise ValueError(f"unknown Hardproof subcommand: {command}")
@@ -328,6 +332,127 @@ class CommandService:
         applied = migrate(self.database)
         detail = ", ".join(map(str, applied)) if applied else "already current"
         return CommandResult(True, f"Database migration: {detail}")
+
+    def _migrate_state(self, rest: list[str]) -> CommandResult:
+        """Migrate a pre-rename .crucible state directory to .hardproof."""
+        self._expect_no_args("migrate-state", rest)
+        project = self.context.project_root
+        old_dir = project / ".crucible"
+        new_dir = project / ".hardproof"
+        backup_dir = project / ".hardproof.backup"
+
+        old_exists = old_dir.exists()
+        new_exists = new_dir.exists()
+
+        if not old_exists:
+            return CommandResult(
+                False,
+                f"No pre-rename state directory found at {old_dir}. Nothing to migrate."
+            )
+        if new_exists and old_exists:
+            # CommandService.__init__ may have auto-created .hardproof/state/.
+            # If the new directory is empty aside from that skeleton, remove it
+            # so migration can proceed.
+            auto_created = True
+            for item in new_dir.rglob("*"):
+                rel = item.relative_to(new_dir)
+                parts = rel.parts
+                if parts[0] == "state" and len(parts) <= 2:
+                    continue  # state/ or state/hardproof.db*
+                auto_created = False
+                break
+            if auto_created:
+                shutil.rmtree(new_dir, ignore_errors=True)
+            else:
+                return CommandResult(
+                    False,
+                    f"Both {old_dir} and {new_dir} exist and {new_dir} has active state. "
+                    f"Resolve manually: remove one directory before migrating."
+                )
+        if new_exists and not old_exists:
+            return CommandResult(False, f"{new_dir} already exists. Nothing to migrate.")
+        if backup_dir.exists():
+            return CommandResult(
+                False,
+                f"Backup directory {backup_dir} already exists. "
+                f"Remove it or rename it before retrying migration."
+            )
+
+        try:
+            shutil.copytree(old_dir, backup_dir, symlinks=False)
+        except OSError as exc:
+            return CommandResult(False, f"Failed to create backup at {backup_dir}: {exc}")
+
+        db_path = old_dir / "state" / "hardproof.db"
+        db_integrity_ok = True
+        if db_path.exists():
+            try:
+                conn = sqlite3.connect(str(db_path))
+                cursor = conn.execute("PRAGMA integrity_check")
+                result = cursor.fetchone()
+                conn.close()
+                if result and result[0] != "ok":
+                    db_integrity_ok = False
+            except Exception as exc:
+                return CommandResult(
+                    False,
+                    f"Source database at {db_path} is unreadable: {exc}. "
+                    f"Backup preserved at {backup_dir}."
+                )
+
+        if not db_integrity_ok:
+            return CommandResult(
+                False,
+                f"Source database at {db_path} failed integrity check. "
+                f"Backup preserved at {backup_dir}. Manual recovery required."
+            )
+
+        try:
+            shutil.copytree(old_dir, new_dir, symlinks=False)
+        except OSError as exc:
+            shutil.rmtree(backup_dir, ignore_errors=True)
+            return CommandResult(False, f"Failed to copy {old_dir} to {new_dir}: {exc}")
+
+        new_db = new_dir / "state" / "hardproof.db"
+        if new_db.exists():
+            try:
+                conn = sqlite3.connect(str(new_db))
+                cursor = conn.execute("PRAGMA integrity_check")
+                result = cursor.fetchone()
+                conn.close()
+                if not result or result[0] != "ok":
+                    shutil.rmtree(new_dir, ignore_errors=True)
+                    return CommandResult(
+                        False,
+                        f"Migrated database at {new_db} failed integrity check. "
+                        f"New directory removed. Backup preserved at {backup_dir}."
+                    )
+            except Exception as exc:
+                shutil.rmtree(new_dir, ignore_errors=True)
+                return CommandResult(
+                    False,
+                    f"Migrated database at {new_db} is unreadable: {exc}. "
+                    f"New directory removed. Backup preserved at {backup_dir}."
+                )
+
+        report = {
+            "migrated_at": utc_now(),
+            "source": str(old_dir),
+            "destination": str(new_dir),
+            "backup": str(backup_dir),
+            "database_integrity": "ok",
+        }
+        report_path = new_dir / "migration-report.json"
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+        return CommandResult(
+            True,
+            f"State migrated from {old_dir} to {new_dir}.\n"
+            f"Backup preserved at {backup_dir}.\n"
+            f"Migration report at {report_path}.\n"
+            f"The old .crucible directory was not removed. Delete it after confirming the migration."
+        )
 
     def _complete(self, rest: list[str]) -> CommandResult:
         self._expect_no_args("complete", rest)
