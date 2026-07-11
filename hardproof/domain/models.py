@@ -37,7 +37,7 @@ def normalize_timestamp(value: str | datetime) -> str:
         raise ValueError(f"invalid timestamp: {value!r}") from exc
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ValueError("timestamp must include a timezone")
-    return parsed.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return parsed.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def utc_now() -> str:

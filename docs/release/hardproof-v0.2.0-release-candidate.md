@@ -1,6 +1,6 @@
 # Hardproof v0.2.0 Release Candidate
 
-Status: Complete locally; not tagged or published
+Status: Complete. Artifacts published as v0.2.0 Gatehouse.
 
 The candidate contains all Gatehouse outcomes and no Workcells functionality. Local evidence:
 369 tests pass; total coverage exceeds 90%; the critical aggregate exceeds 95% and each named

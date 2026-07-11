@@ -14,7 +14,7 @@ All notable changes to Hardproof are documented here.
 
 ### Changed
 
-- Prepared version 0.2.0 as an unpublished release candidate with schema migration 002.
+- Released v0.2.0 Gatehouse on GitHub and PyPI with schema migration 002.
 
 ## [0.1.1] - 2026-07-11
 

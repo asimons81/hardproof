@@ -1,0 +1,22 @@
+# Auto-detect text files, perform LF normalization
+* text=auto
+
+# Explicitly mark shell scripts as LF
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Batch files - CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.ico binary
+*.gif binary
+*.pdf binary
+
+# SQLite databases - treat as binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary

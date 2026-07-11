@@ -27,8 +27,8 @@ def test_timestamps_normalize_to_utc() -> None:
         created_at="2026-07-10T12:00:00-05:00",
         updated_at=datetime(2026, 7, 10, 17, tzinfo=timezone.utc),
     )
-    assert run.created_at == "2026-07-10T17:00:00Z"
-    assert run.updated_at == "2026-07-10T17:00:00Z"
+    assert run.created_at == "2026-07-10T17:00:00.000Z"
+    assert run.updated_at == "2026-07-10T17:00:00.000Z"
 
 
 def test_invalid_timestamp_is_rejected() -> None:
