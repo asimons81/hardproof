@@ -101,7 +101,7 @@ jobs:
         run: python -m pip_audit . --strict
       - name: Build SBOM and checksums
         run: python scripts/build_sbom.py dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: distributions
           path: |
