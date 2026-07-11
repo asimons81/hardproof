@@ -9,6 +9,7 @@ from typing import Any
 
 from crucible_agent.domain.enums import RunProfile, RunStage
 from crucible_agent.domain.models import PolicyDecision, Run
+from crucible_agent.policy.trace import RuleTrace
 
 
 DEFAULT_MUTATING_TOOLS = frozenset({"write_file", "patch", "edit_file", "execute_code", "terminal"})
@@ -44,15 +45,17 @@ class ToolPolicyContext:
 
 
 def _allow(rule: str, reason: str) -> PolicyDecision:
-    return PolicyDecision("allow", rule, reason)
+    return PolicyDecision("allow", rule, reason, trace=(RuleTrace(rule, "matched", reason),))
 
 
 def _block(rule: str, reason: str) -> PolicyDecision:
-    return PolicyDecision("block", rule, reason)
+    return PolicyDecision("block", rule, reason, trace=(RuleTrace(rule, "matched", reason),))
 
 
 def _approval(rule: str, reason: str) -> PolicyDecision:
-    return PolicyDecision("approval", rule, reason, True)
+    return PolicyDecision(
+        "approval", rule, reason, True, (RuleTrace(rule, "matched", reason),)
+    )
 
 
 def _command(args: dict[str, Any]) -> str:

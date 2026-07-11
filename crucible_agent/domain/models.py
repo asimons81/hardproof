@@ -18,6 +18,7 @@ from crucible_agent.domain.enums import (
     RunStatus,
     TaskStatus,
 )
+from crucible_agent.policy.trace import RuleTrace
 
 
 def new_id(prefix: str) -> str:
@@ -306,11 +307,17 @@ class PolicyDecision(Serializable):
     rule_key: str
     reason: str
     requires_human_approval: bool = False
+    trace: tuple[RuleTrace, ...] = ()
+
+    _tuple_fields: ClassVar[tuple[str, ...]] = ("trace",)
 
     def __post_init__(self) -> None:
         if self.action not in {"allow", "block", "approval"}:
             raise ValueError("action must be allow, block, or approval")
         _require_text("rule_key", self.rule_key)
         _require_text("reason", self.reason)
+        object.__setattr__(self, "trace", tuple(self.trace))
         if self.action == "approval" and not self.requires_human_approval:
             raise ValueError("approval action must require human approval")
+        if self.trace and self.trace[-1].rule_key != self.rule_key:
+            raise ValueError("final trace rule must match decision rule_key")

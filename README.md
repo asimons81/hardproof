@@ -3,7 +3,7 @@
 [![CI](https://github.com/asimons81/crucible-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/asimons81/crucible-agent/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-> Alpha software: v0.1.0 is under active development. The command, schema, and extension contracts may change before v1.0.0 through documented migrations and release notes.
+> Alpha software: v0.2.0 is under active development. The command, schema, and extension contracts may change before v1.0.0 through documented migrations and release notes.
 
 Crucible is a local-first engineering protocol for Hermes Agent. It turns rough software requests into durable discovery, approved design and planning, tracked implementation, independent review, and fresh verification evidence tied to the final Git workspace state.
 

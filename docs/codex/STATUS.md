@@ -1,10 +1,10 @@
 # Crucible Codex Status
 
 - Current release: v0.2.0
-- Current release phase: Gatehouse specification complete; Task 0 pending
-- Last completed task: Task 17 - CI, security, packaging, and release automation
-- Next task: v0.2.0 Task 0 - freeze contracts with focused failing tests and ADR 0006
-- Test status: 217 tests pass; 91.55% overall and 99.21% critical-module coverage
+- Current release phase: Gatehouse Task 1 policy domain and migration 002
+- Last completed task: v0.2.0 Task 0 - freeze policy trace and stable-key contracts
+- Next task: v0.2.0 Task 1 - add policy domain models, migration 002, and repositories
+- Test status: 220 tests pass; Ruff and strict mypy pass
 - Current branch: codex/v0.2.0
 - Current version: 0.1.0
 - Unresolved blockers: none

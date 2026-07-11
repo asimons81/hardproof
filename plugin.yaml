@@ -1,5 +1,5 @@
 name: crucible
-version: 0.1.0
+version: 0.2.0
 description: Persistent, risk-aware engineering protocol with durable verification evidence.
 author: Crucible Agent contributors
 kind: workflow
