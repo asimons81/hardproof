@@ -145,3 +145,22 @@ def test_missing_target_is_never_treated_as_an_artifact_write(tmp_path: Path) ->
     )
     assert decision.action == "block"
     assert decision.rule_key == "stage.before_implement.source_mutation"
+
+
+def test_chained_force_push_cannot_hide_after_safe_command(tmp_path: Path) -> None:
+    decision = evaluate_tool_call(
+        "terminal",
+        {"command": "python -m pytest && git push origin main --force-with-lease"},
+        context(tmp_path, RunStage.DELIVER, RunProfile.CRITICAL),
+    )
+    assert decision.action == "block"
+    assert decision.rule_key == "terminal.immutable.force_push"
+
+
+def test_malformed_terminal_input_is_blocked_with_safe_explanation(tmp_path: Path) -> None:
+    decision = evaluate_tool_call(
+        "terminal", {"command": "echo 'unterminated"}, context(tmp_path, RunStage.IMPLEMENT)
+    )
+    assert decision.action == "block"
+    assert decision.rule_key == "terminal.ambiguous"
+    assert "unterminated" not in decision.reason

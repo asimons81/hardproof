@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -10,18 +9,11 @@ from typing import Any
 from crucible_agent.domain.enums import RunProfile, RunStage
 from crucible_agent.domain.models import PolicyDecision, Run
 from crucible_agent.policy.trace import RuleTrace
+from crucible_agent.policy.terminal import TerminalCategory, classify_terminal
 
 
 DEFAULT_MUTATING_TOOLS = frozenset({"write_file", "patch", "edit_file", "execute_code", "terminal"})
 PATH_KEYS = ("path", "file_path", "target", "destination")
-_FORCE_PUSH = re.compile(r"(?:^|[;&|]\s*)git\s+push\b[^\r\n]*(?:--force(?:-with-lease)?\b|(?:^|\s)-f(?:\s|$))", re.I)
-_RESET_HARD = re.compile(r"\bgit\s+reset\s+--hard\b", re.I)
-_GIT_CLEAN = re.compile(r"\bgit\s+clean\b[^\r\n]*\s-[a-z]*f", re.I)
-_DELETE_TREE = re.compile(r"(?:\brm\s+-[a-z]*r[a-z]*f|\bremove-item\b[^\r\n]*-recurse|\bdel\s+/s\b)", re.I)
-_DEPLOY = re.compile(
-    r"\b(?:vercel\s+deploy|kubectl\s+(?:apply|delete)|terraform\s+(?:apply|destroy)|npm\s+publish|twine\s+upload|docker\s+push)\b",
-    re.I,
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,20 +78,17 @@ def _inside(path: Path | None, parent: Path) -> bool:
 
 
 def _terminal_policy(command: str, context: ToolPolicyContext) -> PolicyDecision | None:
-    if _FORCE_PUSH.search(command):
+    classification = classify_terminal(command)
+    primary = classification.primary
+    if primary.category is TerminalCategory.AMBIGUOUS:
+        return _block(primary.rule_key, primary.explanation)
+    if primary.rule_key == "terminal.immutable.force_push":
         return _block("terminal.immutable.force_push", "Force push is blocked by immutable Crucible policy.")
-    destructive_rule: str | None = None
-    if _RESET_HARD.search(command):
-        destructive_rule = "terminal.destructive.git_reset_hard"
-    elif _GIT_CLEAN.search(command):
-        destructive_rule = "terminal.destructive.git_clean"
-    elif _DELETE_TREE.search(command):
-        destructive_rule = "terminal.destructive.recursive_delete"
-    if destructive_rule:
+    if primary.category is TerminalCategory.DESTRUCTIVE:
         if context.run.profile is RunProfile.CRITICAL:
-            return _approval(destructive_rule, "Critical destructive command requires human confirmation.")
-        return _block(destructive_rule, "Destructive command is blocked for this Crucible profile.")
-    if _DEPLOY.search(command):
+            return _approval(primary.rule_key, "Critical destructive command requires human confirmation.")
+        return _block(primary.rule_key, "Destructive command is blocked for this Crucible profile.")
+    if primary.category is TerminalCategory.DEPLOYMENT:
         if context.run.stage is not RunStage.DELIVER:
             return _block("terminal.deployment.before_deliver", "Deployment is blocked before DELIVER.")
         if context.run.profile is RunProfile.CRITICAL:
