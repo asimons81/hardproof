@@ -20,6 +20,8 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: python -m pip install -e ".[dev]"
+      - name: Build (wheel contract tests need dist/)
+        run: python -m build
       - name: Ruff
         run: python -m ruff check hardproof tests scripts
       - name: mypy
@@ -71,6 +73,8 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
       - run: python -m pip install -e ".[dev]"
+      - name: Build (wheel contract tests need dist/)
+        run: python -m build
       - name: Unit, integration, contract, and e2e tests
         run: python -m pytest
 
