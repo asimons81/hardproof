@@ -71,7 +71,7 @@ def capture_git_snapshot(project_root: str | Path) -> WorkspaceSnapshot:
     root = Path(project_root).resolve()
     resolved = Path(_git(root, "rev-parse", "--show-toplevel").decode("utf-8").strip()).resolve()
     head = _git(resolved, "rev-parse", "HEAD").decode("ascii").strip()
-    diff = _git(resolved, "diff", "--binary", "--no-ext-diff", "HEAD")
+    diff = _git(resolved, "diff", "--no-ext-diff", "HEAD")
     untracked = [
         item for item in _git(resolved, "ls-files", "--others", "--exclude-standard", "-z").split(b"\0")
         if item
