@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import hashlib
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -13,11 +15,12 @@ from uuid import uuid4
 import yaml
 
 from crucible_agent.compat import inspect_context
-from crucible_agent.config import DEFAULTS, ConfigError, load_config
+from crucible_agent.config import DEFAULTS, ConfigError, config_fingerprint, load_config
 from crucible_agent.domain.enums import ApprovalGate, RunProfile, RunStage
 from crucible_agent.domain.models import Run, SessionBinding, VerificationCheck, new_id, utc_now
 from crucible_agent.paths import ProjectPaths
 from crucible_agent.policy.stage_rules import TransitionFacts
+from crucible_agent.policy.tool_rules import ToolPolicyContext, evaluate_tool_call
 from crucible_agent.services.approvals import ApprovalService
 from crucible_agent.services.evidence import evidence_with_freshness
 from crucible_agent.services.runs import RunService
@@ -136,6 +139,94 @@ class CommandService:
     def transition_facts(self, run_id: str) -> TransitionFacts:
         """Return current durable facts for model-requested transition evaluation."""
         return self._facts(run_id)
+
+    @staticmethod
+    def _policy_payload(
+        *,
+        sequence: int | None,
+        identifier: str | None,
+        tool_name: str,
+        action: str,
+        rule_key: str,
+        reason: str,
+        trace: tuple[Any, ...],
+        arguments_sha256: str,
+        config_sha256: str,
+        waiver_id: str | None,
+        created_at: str | None,
+    ) -> dict[str, Any]:
+        return {
+            "sequence": sequence,
+            "id": identifier,
+            "tool_name": tool_name,
+            "action": action,
+            "rule_key": rule_key,
+            "reason": reason,
+            "trace": [item.to_dict() for item in trace],
+            "arguments_sha256": arguments_sha256,
+            "config_sha256": config_sha256,
+            "waiver_id": waiver_id,
+            "created_at": created_at,
+        }
+
+    def explain_policy(
+        self,
+        *,
+        event_sequence: int | None = None,
+        tool_name: str | None = None,
+        args: dict[str, Any] | None = None,
+        now: str | None = None,
+    ) -> dict[str, Any]:
+        run_id = self.active_run_id()
+        if (event_sequence is None) == (tool_name is None):
+            raise ValueError("choose exactly one policy event or hypothetical tool call")
+        if event_sequence is not None:
+            record = self.repository.get_policy_decision(run_id, event_sequence)
+            return self._policy_payload(
+                sequence=record.sequence, identifier=record.id, tool_name=record.tool_name,
+                action=record.action, rule_key=record.rule_key, reason=record.reason,
+                trace=record.trace, arguments_sha256=record.arguments_sha256,
+                config_sha256=record.config_sha256, waiver_id=record.waiver_id,
+                created_at=record.created_at,
+            )
+        safe_args = args if isinstance(args, dict) else {}
+        canonical = json.dumps(safe_args, sort_keys=True, separators=(",", ":"), default=str)
+        if len(canonical) > 16_384:
+            raise ValueError("hypothetical policy arguments exceed 16384 characters")
+        config = load_config(self.paths.config)
+        run = self.repository.get_run(run_id)
+        effective_time = now or utc_now()
+        context = ToolPolicyContext(
+            run, self.context.project_root, self.paths.run_directory(run.id),
+            frozenset(config.mutating_tools), policy=config.policy,
+            config_sha256=config_fingerprint(config),
+            waivers=self.repository.list_applicable_waivers(run.id),
+            effective_time=effective_time,
+        )
+        decision = evaluate_tool_call(str(tool_name), safe_args, context)
+        return self._policy_payload(
+            sequence=None, identifier=None, tool_name=str(tool_name), action=decision.action,
+            rule_key=decision.rule_key, reason=decision.reason, trace=decision.trace,
+            arguments_sha256=hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+            config_sha256=context.config_sha256, waiver_id=decision.waiver_id,
+            created_at=None,
+        )
+
+    @staticmethod
+    def _render_policy_explanation(payload: dict[str, Any], format: str) -> str:
+        if format == "json":
+            return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        lines = [
+            f"Action: {payload['action']}", f"Rule: {payload['rule_key']}",
+            f"Reason: {payload['reason']}", "Trace:",
+        ]
+        lines.extend(
+            f"{index}. {item['rule_key']} [{item['outcome']}] {item['explanation']}"
+            for index, item in enumerate(payload["trace"], 1)
+        )
+        lines.append(f"Arguments SHA-256: {payload['arguments_sha256']}")
+        lines.append(f"Config SHA-256: {payload['config_sha256']}")
+        return "\n".join(lines)
 
     def execute(self, argv: list[str]) -> CommandResult:
         if not argv:
@@ -350,8 +441,41 @@ class CommandService:
         return options
 
     def _policy(self, rest: list[str]) -> CommandResult:
+        if rest and rest[0] == "explain":
+            options = self._command_options(
+                rest[1:], frozenset({"--event", "--tool", "--args-json", "--format"})
+            )
+            event = options.get("--event")
+            tool = options.get("--tool")
+            if (event is None) == (tool is None):
+                raise ValueError("policy explain requires exactly one of --event or --tool")
+            format_value = str(options.get("--format", "human"))
+            if format_value not in {"human", "json"}:
+                raise ValueError("policy explain --format must be human or json")
+            if event is not None:
+                try:
+                    sequence = int(str(event))
+                except ValueError as exc:
+                    raise ValueError("policy explain --event must be a positive integer") from exc
+                if sequence < 1:
+                    raise ValueError("policy explain --event must be a positive integer")
+                payload = self.explain_policy(event_sequence=sequence)
+            else:
+                raw_json = str(options.get("--args-json", "{}"))
+                if len(raw_json) > 16_384:
+                    raise ValueError("policy explain --args-json exceeds 16384 characters")
+                try:
+                    parsed = json.loads(raw_json)
+                except json.JSONDecodeError as exc:
+                    raise ValueError("policy explain --args-json must be valid JSON") from exc
+                if not isinstance(parsed, dict):
+                    raise ValueError("policy explain --args-json root must be an object")
+                payload = self.explain_policy(tool_name=str(tool), args=parsed)
+            return CommandResult(
+                True, self._render_policy_explanation(payload, format_value), self.active_run_id()
+            )
         if len(rest) < 2 or rest[0] != "waivers":
-            raise ValueError("usage: policy waivers <list|create|revoke>")
+            raise ValueError("usage: policy <explain|waivers>")
         action = rest[1]
         service = WaiverService(self.repository)
         run_id = self.active_run_id()

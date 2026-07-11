@@ -98,6 +98,16 @@ def register(ctx: Any) -> None:
 
         def report(args: dict[str, Any]) -> dict[str, Any]:
             action = str(args.get("action", "status"))
+            if action == "policy_explain":
+                raw_arguments = args.get("arguments")
+                arguments = raw_arguments if isinstance(raw_arguments, dict) else {}
+                sequence = args.get("event_sequence")
+                explanation = command_service.explain_policy(
+                    event_sequence=int(sequence) if sequence is not None else None,
+                    tool_name=str(args["tool_name"]) if args.get("tool_name") else None,
+                    args=arguments,
+                )
+                return {"ok": True, "action": action, "explanation": explanation}
             if action in {"export", "completion"}:
                 run_id = command_service.active_run_id()
                 paths = ReportService(

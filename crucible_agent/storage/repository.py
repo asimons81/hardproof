@@ -465,10 +465,21 @@ class RunRepository:
         records: list[PolicyDecisionRecord] = []
         for row in rows:
             payload = dict(row)
-            payload.pop("sequence")
             payload["trace"] = json.loads(payload.pop("trace_json"))
             records.append(PolicyDecisionRecord.from_dict(payload))
         return tuple(records)
+
+    def get_policy_decision(self, run_id: str, sequence: int) -> PolicyDecisionRecord:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM policy_decisions WHERE run_id=? AND sequence=?",
+                (run_id, sequence),
+            ).fetchone()
+        if row is None:
+            raise LookupError(f"policy decision not found: {sequence}")
+        payload = dict(row)
+        payload["trace"] = json.loads(payload.pop("trace_json"))
+        return PolicyDecisionRecord.from_dict(payload)
 
     def add_risk_suggestion(self, suggestion: RiskSuggestion) -> None:
         with self.database.connect() as connection:

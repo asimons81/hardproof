@@ -71,7 +71,9 @@ def test_gatehouse_ledgers_round_trip_and_preserve_append_order(tmp_path: Path) 
         "named waiver matched", trace, "a" * 64, "b" * 64, waiver.id, RiskLevel.LOW, NOW,
     )
     repository.add_policy_decision(decision)
-    assert repository.list_policy_decisions(run.id) == (decision,)
+    stored_decision = repository.list_policy_decisions(run.id)[0]
+    assert stored_decision.sequence == 1
+    assert stored_decision == PolicyDecisionRecord.from_dict({**decision.to_dict(), "sequence": 1})
 
     risk = RiskSuggestion(
         "risk-1", run.id, None, RiskLevel.HIGH, ("migration file",), None, None, NOW

@@ -347,6 +347,7 @@ class PolicyDecisionRecord(Serializable):
     waiver_id: str | None
     suggested_risk: RiskLevel | None
     created_at: str
+    sequence: int | None = None
 
     _tuple_fields: ClassVar[tuple[str, ...]] = ("trace",)
 
@@ -363,6 +364,8 @@ class PolicyDecisionRecord(Serializable):
         if self.suggested_risk is not None:
             object.__setattr__(self, "suggested_risk", _enum(RiskLevel, self.suggested_risk))
         object.__setattr__(self, "created_at", normalize_timestamp(self.created_at))
+        if self.sequence is not None and self.sequence < 1:
+            raise ValueError("policy decision sequence must be positive")
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> PolicyDecisionRecord:

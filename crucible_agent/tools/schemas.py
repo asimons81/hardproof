@@ -87,9 +87,12 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         "crucible_report",
         "Inspect status or evidence and export deterministic run or completion reports without exposing secrets.",
         {
-            "action": {"type": "string", "enum": ["status", "evidence", "export", "completion"]},
+            "action": {"type": "string", "enum": ["status", "evidence", "export", "completion", "policy_explain"]},
             "path": STRING,
             "format": {"type": "string", "enum": ["markdown", "json", "both"]},
+            "event_sequence": {"type": "integer", "minimum": 1},
+            "tool_name": STRING,
+            "arguments": {"type": "object"},
         },
         ["action"],
     ),
