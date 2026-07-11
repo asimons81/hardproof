@@ -26,6 +26,7 @@ def test_first_turn_falls_back_to_active_pointer_and_persists_binding(tmp_path: 
     result = hook(session_id="session-a", is_first_turn=True)
     assert result is not None
     assert "HARDPROOF RUN ACTIVE" in result["context"]
+    assert started.run_id is not None
     assert started.run_id in result["context"]
     assert repository.get_session_binding("session-a") is not None
 

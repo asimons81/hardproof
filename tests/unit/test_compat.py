@@ -30,7 +30,7 @@ def test_complete_context_reports_required_capabilities() -> None:
 
 def test_missing_required_capability_refuses_registration() -> None:
     context = CompleteContext()
-    context.dispatch_tool = None  # type: ignore[method-assign]
+    context.dispatch_tool = None  # type: ignore[method-assign]  # type: ignore[assignment]
     report = inspect_context(context)
     assert report.compatible is False
     assert report.missing_required == ("dispatch_tool",)
