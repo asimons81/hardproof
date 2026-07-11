@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import os
 import re
+import hashlib
+import json
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import yaml
 
 from crucible_agent.constants import CONFIG_SCHEMA_VERSION
-from crucible_agent.domain.enums import RunProfile
+from crucible_agent.domain.enums import RunProfile, RunStage
 from crucible_agent.paths import safe_project_relative
 
 
@@ -34,8 +36,29 @@ class VerificationCheckConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class PolicyRuleConfig:
+    key: str
+    effect: str
+    tools: tuple[str, ...]
+    rationale: str
+    command_regex: str | None = None
+    path_glob: str | None = None
+    profiles: tuple[RunProfile, ...] = ()
+    stages: tuple[RunStage, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class PolicyConfig:
+    state_failure_mode: str
+    rules: tuple[PolicyRuleConfig, ...]
+    packs: tuple[str, ...]
+    stage_graph: dict[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
 class CrucibleConfig:
     schema_version: int
+    source_schema_version: int
     default_profile: RunProfile
     artifact_directory: Path
     verification_checks: tuple[VerificationCheckConfig, ...]
@@ -45,6 +68,7 @@ class CrucibleConfig:
     output_redaction_patterns: tuple[str, ...]
     maximum_stored_output_size: int
     mutating_tools: tuple[str, ...]
+    policy: PolicyConfig
 
 
 DEFAULTS: dict[str, Any] = {
@@ -62,11 +86,24 @@ DEFAULTS: dict[str, Any] = {
     ],
     "maximum_stored_output_size": 1_048_576,
     "mutating_tools": ["write_file", "patch", "edit_file", "execute_code", "terminal"],
+    "policy": {
+        "state_failure_mode": "profile",
+        "rules": [],
+        "packs": [],
+        "stage_graph": {},
+    },
 }
 
 ALLOWED_KEYS = frozenset(DEFAULTS)
 _ENV = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 _SECRET_ENV = re.compile(r"(?i)(secret|token|password|key|credential|auth|cookie)")
+_PROJECT_RULE_KEY = re.compile(r"^project\.[a-z0-9][a-z0-9_.-]{0,126}$")
+_NESTED_QUANTIFIER = re.compile(r"\([^)]*[+*][^)]*\)[+*{]")
+_POLICY_KEYS = frozenset({"state_failure_mode", "rules", "packs", "stage_graph"})
+_RULE_KEYS = frozenset(
+    {"key", "effect", "tools", "rationale", "command_regex", "path_glob", "profiles", "stages"}
+)
+_PACKS = frozenset({"python", "node", "rust", "go"})
 
 
 def _expand_path(value: Any) -> Path:
@@ -93,6 +130,123 @@ def _string_tuple(name: str, value: Any) -> tuple[str, ...]:
     return tuple(value)
 
 
+def _policy_rule(value: Any, index: int) -> PolicyRuleConfig:
+    location = f"policy.rules[{index}]"
+    if not isinstance(value, dict):
+        raise ConfigError(f"{location} must be a mapping")
+    unknown = sorted(set(value) - _RULE_KEYS)
+    if unknown:
+        raise ConfigError(f"{location} has unknown keys: {', '.join(unknown)}")
+    key = value.get("key")
+    if not isinstance(key, str) or not _PROJECT_RULE_KEY.fullmatch(key):
+        raise ConfigError(f"{location}.key must be a project rule key beginning with project.")
+    effect = value.get("effect")
+    if effect not in {"allow", "deny", "approval"}:
+        raise ConfigError(f"{location}.effect must be allow, deny, or approval")
+    tools = _string_tuple(f"{location}.tools", value.get("tools"))
+    rationale = value.get("rationale")
+    if not isinstance(rationale, str) or not rationale.strip():
+        raise ConfigError(f"{location}.rationale must be non-empty")
+    command_regex = value.get("command_regex")
+    if command_regex is not None:
+        if not isinstance(command_regex, str) or not command_regex or len(command_regex) > 256:
+            raise ConfigError(f"{location}.command_regex must be 1 to 256 characters")
+        if "(?" in command_regex or re.search(r"\\[1-9]", command_regex) or _NESTED_QUANTIFIER.search(command_regex):
+            raise ConfigError(f"{location}.command_regex uses an unsafe regex construct")
+        try:
+            re.compile(command_regex)
+        except re.error as exc:
+            raise ConfigError(f"{location}.command_regex is invalid: {exc}") from exc
+    path_glob = value.get("path_glob")
+    if path_glob is not None:
+        if not isinstance(path_glob, str) or not path_glob or len(path_glob) > 256:
+            raise ConfigError(f"{location}.path_glob must be 1 to 256 characters")
+        normalized = PurePosixPath(path_glob.replace("\\", "/"))
+        if normalized.is_absolute() or ".." in normalized.parts:
+            raise ConfigError(f"{location}.path_glob must be project-relative without traversal")
+    profiles_value = value.get("profiles", [])
+    stages_value = value.get("stages", [])
+    try:
+        profiles = tuple(RunProfile(item) for item in _string_tuple(f"{location}.profiles", profiles_value))
+    except ValueError as exc:
+        raise ConfigError(f"{location}.profiles contains an unknown profile") from exc
+    try:
+        stages = tuple(RunStage(item) for item in _string_tuple(f"{location}.stages", stages_value))
+    except ValueError as exc:
+        raise ConfigError(f"{location}.stages contains an unknown stage") from exc
+    return PolicyRuleConfig(
+        key, effect, tools, rationale.strip(), command_regex, path_glob, profiles, stages
+    )
+
+
+def _policy(value: Any, default_profile: RunProfile) -> PolicyConfig:
+    if not isinstance(value, dict):
+        raise ConfigError("policy must be a mapping")
+    unknown = sorted(set(value) - _POLICY_KEYS)
+    if unknown:
+        raise ConfigError(f"policy has unknown keys: {', '.join(unknown)}")
+    mode = value.get("state_failure_mode", "profile")
+    if mode not in {"profile", "open", "closed"}:
+        raise ConfigError("policy.state_failure_mode must be profile, open, or closed")
+    if mode == "open" and default_profile is RunProfile.CRITICAL:
+        raise ConfigError("policy.state_failure_mode open is invalid with critical default_profile")
+    rules_value = value.get("rules", [])
+    if not isinstance(rules_value, list):
+        raise ConfigError("policy.rules must be a list")
+    rules = tuple(_policy_rule(item, index) for index, item in enumerate(rules_value))
+    if len({rule.key for rule in rules}) != len(rules):
+        raise ConfigError("policy.rules keys must be unique")
+    packs = _string_tuple("policy.packs", value.get("packs", []))
+    unknown_packs = sorted(set(packs) - _PACKS)
+    if unknown_packs:
+        raise ConfigError(f"policy.packs contains unknown packs: {', '.join(unknown_packs)}")
+    if len(set(packs)) != len(packs):
+        raise ConfigError("policy.packs must not contain duplicates")
+    stage_graph = value.get("stage_graph", {})
+    if not isinstance(stage_graph, dict):
+        raise ConfigError("policy.stage_graph must be a mapping")
+    return PolicyConfig(mode, rules, packs, dict(stage_graph))
+
+
+def config_fingerprint(config: CrucibleConfig) -> str:
+    """Hash the effective, validated configuration for durable policy evidence."""
+    payload = {
+        "schema_version": config.schema_version,
+        "default_profile": config.default_profile.value,
+        "artifact_directory": config.artifact_directory.as_posix(),
+        "verification_checks": [
+            {
+                "name": item.name, "command": item.command, "required": item.required,
+                "timeout_seconds": item.timeout_seconds,
+            }
+            for item in config.verification_checks
+        ],
+        "stage_policy_overrides": config.stage_policy_overrides,
+        "terminal_read_only_prefixes": config.terminal_read_only_prefixes,
+        "terminal_blocked_patterns": config.terminal_blocked_patterns,
+        "output_redaction_patterns": config.output_redaction_patterns,
+        "maximum_stored_output_size": config.maximum_stored_output_size,
+        "mutating_tools": config.mutating_tools,
+        "policy": {
+            "state_failure_mode": config.policy.state_failure_mode,
+            "rules": [
+                {
+                    "key": rule.key, "effect": rule.effect, "tools": rule.tools,
+                    "rationale": rule.rationale, "command_regex": rule.command_regex,
+                    "path_glob": rule.path_glob,
+                    "profiles": [item.value for item in rule.profiles],
+                    "stages": [item.value for item in rule.stages],
+                }
+                for rule in config.policy.rules
+            ],
+            "packs": config.policy.packs,
+            "stage_graph": config.policy.stage_graph,
+        },
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def load_config(path: str | Path) -> CrucibleConfig:
     """Load a project config over defaults without creating or modifying it."""
     config_path = Path(path)
@@ -107,12 +261,16 @@ def load_config(path: str | Path) -> CrucibleConfig:
         if not isinstance(loaded, dict):
             raise ConfigError("YAML config root must be a mapping")
         supplied = loaded
+    source_schema = supplied.get("schema_version", CONFIG_SCHEMA_VERSION)
+    if not isinstance(source_schema, int) or isinstance(source_schema, bool) or source_schema not in {1, 2}:
+        raise ConfigError(f"unsupported config schema_version: {source_schema}")
+    if source_schema == 1 and "policy" in supplied:
+        raise ConfigError("config schema_version 1 does not support policy; use schema_version 2")
     unknown = sorted(set(supplied) - ALLOWED_KEYS)
     if unknown:
         raise ConfigError(f"unknown config keys: {', '.join(unknown)}")
     values = {**DEFAULTS, **supplied}
-    if values["schema_version"] != CONFIG_SCHEMA_VERSION:
-        raise ConfigError(f"unsupported config schema_version: {values['schema_version']}")
+    values["schema_version"] = CONFIG_SCHEMA_VERSION
     try:
         profile = RunProfile(values["default_profile"])
     except (TypeError, ValueError) as exc:
@@ -134,6 +292,7 @@ def load_config(path: str | Path) -> CrucibleConfig:
         raise ConfigError("maximum_stored_output_size must be a positive integer")
     return CrucibleConfig(
         schema_version=CONFIG_SCHEMA_VERSION,
+        source_schema_version=source_schema,
         default_profile=profile,
         artifact_directory=_expand_path(values["artifact_directory"]),
         verification_checks=checks,
@@ -149,4 +308,5 @@ def load_config(path: str | Path) -> CrucibleConfig:
         ),
         maximum_stored_output_size=maximum,
         mutating_tools=_string_tuple("mutating_tools", values["mutating_tools"]),
+        policy=_policy(values["policy"], profile),
     )

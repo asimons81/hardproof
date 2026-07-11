@@ -1,10 +1,10 @@
 # Crucible Codex Status
 
 - Current release: v0.2.0
-- Current release phase: Gatehouse Task 3 strict project policy configuration
-- Last completed task: v0.2.0 Task 2 - deterministic cross-shell terminal normalization
-- Next task: v0.2.0 Task 3 - config schema v2 and safe policy-rule validation
-- Test status: 255 tests pass; 51 focused policy tests, Ruff, and strict mypy pass
+- Current release phase: Gatehouse Task 4 single traceable policy engine
+- Last completed task: v0.2.0 Task 3 - strict config schema v2 with v1 compatibility
+- Next task: v0.2.0 Task 4 - ordered rule evaluation, fingerprints, and durable traces
+- Test status: 266 tests pass; 48 focused config/adapter tests, Ruff, and strict mypy pass
 - Current branch: codex/v0.2.0
 - Current version: 0.2.0
 - Unresolved blockers: none
