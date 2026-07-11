@@ -2,16 +2,16 @@ from pathlib import Path
 
 import pytest
 
-from crucible_agent.domain.enums import ArtifactKind, RunProfile
-from crucible_agent.domain.models import Run
-from crucible_agent.services.artifacts import ArtifactService
-from crucible_agent.storage.database import Database
-from crucible_agent.storage.migrations import migrate
-from crucible_agent.storage.repository import RunRepository
+from hardproof.domain.enums import ArtifactKind, RunProfile
+from hardproof.domain.models import Run
+from hardproof.services.artifacts import ArtifactService
+from hardproof.storage.database import Database
+from hardproof.storage.migrations import migrate
+from hardproof.storage.repository import RunRepository
 
 
 def service_for(tmp_path: Path) -> tuple[ArtifactService, Run]:
-    database = Database(tmp_path / "state" / "crucible.db")
+    database = Database(tmp_path / "state" / "hardproof.db")
     migrate(database)
     repository = RunRepository(database)
     run = Run.create(str(tmp_path), "artifact test", RunProfile.STANDARD)

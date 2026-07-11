@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from crucible_agent.domain.enums import RunProfile, RunStage, RunStatus
-from crucible_agent.domain.models import Run
-from crucible_agent.policy.tool_rules import ToolPolicyContext, evaluate_tool_call
+from hardproof.domain.enums import RunProfile, RunStage, RunStatus
+from hardproof.domain.models import Run
+from hardproof.policy.tool_rules import ToolPolicyContext, evaluate_tool_call
 
 
 NOW = "2026-07-11T09:00:00Z"
@@ -20,13 +20,13 @@ def context(tmp_path: Path, stage: RunStage, profile: RunProfile = RunProfile.ST
     return ToolPolicyContext(
         run(stage, profile),
         project_root=tmp_path,
-        artifact_directory=tmp_path / ".crucible" / "runs" / "run-1",
+        artifact_directory=tmp_path / ".hardproof" / "runs" / "run-1",
     )
 
 
 def test_artifact_write_allowed_during_design(tmp_path: Path) -> None:
     decision = evaluate_tool_call(
-        "write_file", {"path": str(tmp_path / ".crucible/runs/run-1/design.md")},
+        "write_file", {"path": str(tmp_path / ".hardproof/runs/run-1/design.md")},
         context(tmp_path, RunStage.DESIGN),
     )
     assert decision.action == "allow"
@@ -132,7 +132,7 @@ def test_no_active_run_passes_through(tmp_path: Path) -> None:
 
 def test_mutating_tool_names_are_feature_configurable(tmp_path: Path) -> None:
     policy = ToolPolicyContext(
-        run(RunStage.DESIGN), tmp_path, tmp_path / ".crucible/runs/run-1",
+        run(RunStage.DESIGN), tmp_path, tmp_path / ".hardproof/runs/run-1",
         mutating_tools=frozenset({"future_write"}),
     )
     assert evaluate_tool_call("future_write", {"path": "src.py"}, policy).action == "block"

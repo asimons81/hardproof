@@ -10,9 +10,9 @@ Gatehouse must explain every policy outcome while adding project rules, waivers,
 
 ## Decision
 
-Crucible will retain one policy evaluator. It returns an immutable ordered tuple of trace entries and one final stable rule key. Rule precedence is state availability, immutable terminal safety, project deny, project approval, stage mutation, project allow, policy pack, then default. The final trace entry must match the decision's final rule key.
+Hardproof will retain one policy evaluator. It returns an immutable ordered tuple of trace entries and one final stable rule key. Rule precedence is state availability, immutable terminal safety, project deny, project approval, stage mutation, project allow, policy pack, then default. The final trace entry must match the decision's final rule key.
 
-Crucible owns the `terminal.immutable.*` namespace. Configuration and waivers may refer to immutable keys for explanation but can never define, replace, or waive them. Existing v0.1.0 rule keys are frozen as a compatibility set.
+Hardproof owns the `terminal.immutable.*` namespace. Configuration and waivers may refer to immutable keys for explanation but can never define, replace, or waive them. Existing v0.1.0 rule keys are frozen as a compatibility set.
 
 Evaluation receives the effective time from its caller whenever expiry matters. The same normalized inputs, configuration, durable state, and supplied time therefore produce the same result and trace.
 

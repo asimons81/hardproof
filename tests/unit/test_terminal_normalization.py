@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from hypothesis import given, strategies as st
 
-from crucible_agent.policy.terminal import TerminalCategory, classify_terminal
+from hardproof.policy.terminal import TerminalCategory, classify_terminal
 
 
 @pytest.mark.parametrize(

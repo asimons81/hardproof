@@ -4,8 +4,8 @@ import json
 import subprocess
 from pathlib import Path
 
-from crucible_agent.plugin import register
-from crucible_agent.commands.shared import CommandContext, CommandService
+from hardproof.plugin import register
+from hardproof.commands.shared import CommandContext, CommandService
 
 
 class FakePluginContext:
@@ -33,12 +33,12 @@ def test_registered_report_tool_explains_hypothetical_without_raw_arguments(
     monkeypatch.chdir(tmp_path)
     context = FakePluginContext()
     register(context)
-    started = json.loads(context.tools["crucible_run"]({
+    started = json.loads(context.tools["hardproof_run"]({
         "action": "start", "profile": "standard", "request": "explain tool",
     }))
     assert started["ok"]
     secret = "token=must-not-return"
-    result = json.loads(context.tools["crucible_report"]({
+    result = json.loads(context.tools["hardproof_report"]({
         "action": "policy_explain",
         "tool_name": "terminal",
         "arguments": {"command": "git reset --hard HEAD", "content": secret},
@@ -55,13 +55,13 @@ def test_registered_risk_suggestion_is_pure_and_advisory(tmp_path: Path, monkeyp
     monkeypatch.chdir(tmp_path)
     context = FakePluginContext()
     register(context)
-    json.loads(context.tools["crucible_run"]({
+    json.loads(context.tools["hardproof_run"]({
         "action": "start", "profile": "standard", "request": "risk tool",
     }))
     commands = CommandService(CommandContext(tmp_path, actor="model", source="tool"))
     run_id = commands.active_run_id()
     before_profile = commands.repository.get_run(run_id).profile
-    result = json.loads(context.tools["crucible_report"]({
+    result = json.loads(context.tools["hardproof_report"]({
         "action": "risk_suggest", "text": "Deploy a production migration",
         "files": ["migrations/003.sql"], "command": "kubectl apply -f app.yaml",
     }))

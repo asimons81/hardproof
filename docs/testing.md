@@ -1,6 +1,6 @@
-# Testing Crucible
+# Testing Hardproof
 
-Crucible tests observable protocol behavior and refusal paths. The suite is divided into unit, integration, contract, end-to-end, migration, policy, evidence, and package-install checks.
+Hardproof tests observable protocol behavior and refusal paths. The suite is divided into unit, integration, contract, end-to-end, migration, policy, evidence, and package-install checks.
 
 ## Local checks
 
@@ -8,8 +8,8 @@ Run the full suite and static gates:
 
 ```bash
 python -m pytest
-python -m ruff check crucible_agent tests scripts
-python -m mypy crucible_agent
+python -m ruff check hardproof tests scripts
+python -m mypy hardproof
 ```
 
 Build and inspect distributions:
@@ -17,7 +17,7 @@ Build and inspect distributions:
 ```bash
 python -m build
 python -m twine check dist/*
-python scripts/smoke_install.py dist/crucible_agent-0.1.0-py3-none-any.whl
+python scripts/smoke_install.py dist/hardproof-0.1.0-py3-none-any.whl
 ```
 
 The clean-wheel smoke test creates a temporary virtual environment, installs normal dependencies, resolves the `hermes_agent.plugins` entry point, imports the package, and then deletes the environment.

@@ -5,12 +5,12 @@ from pathlib import Path
 
 import yaml
 
-from crucible_agent.domain.enums import RunStage
-from crucible_agent.plugin import SKILL_NAMES, register_skills
-from crucible_agent.tools.schemas import TOOL_SCHEMAS
+from hardproof.domain.enums import RunStage
+from hardproof.plugin import SKILL_NAMES, register_skills
+from hardproof.tools.schemas import TOOL_SCHEMAS
 
 
-ROOT = Path(__file__).resolve().parents[2] / "crucible_agent" / "skills"
+ROOT = Path(__file__).resolve().parents[2] / "hardproof" / "skills"
 REQUIRED_HEADINGS = (
     "## Purpose", "## When to use", "## Inputs", "## Procedure",
     "## Required records", "## Exit criteria", "## Failure modes", "## Verification",
@@ -50,14 +50,14 @@ def test_skills_reference_only_real_tools_and_stages() -> None:
     valid_stages = {stage.value for stage in RunStage}
     for path in skill_files():
         _, body = parse(path)
-        referenced_tools = set(re.findall(r"`(crucible_[a-z_]+)`", body))
+        referenced_tools = set(re.findall(r"`(hardproof_[a-z_]+)`", body))
         assert referenced_tools <= valid_tools, (path, referenced_tools - valid_tools)
         referenced_stages = set(re.findall(r"\b[A-Z]{4,10}\b", body)) & {
             "INTAKE", "DISCOVERY", "DESIGN", "PLAN", "IMPLEMENT", "REVIEW",
             "VERIFY", "DELIVER", "LEARN", "COMPLETE", "PAUSED", "ABORTED",
         }
         assert referenced_stages <= valid_stages
-        assert "`crucible_transition`" in body
+        assert "`hardproof_transition`" in body
 
 
 def test_no_upstream_namespace_or_banned_copied_phrases() -> None:

@@ -1,6 +1,6 @@
 # Security Model
 
-Crucible enforces engineering-process policy; it is not a security sandbox. It does not replace operating-system permissions, repository protection, isolated execution, Hermes approvals, or human review.
+Hardproof enforces engineering-process policy; it is not a security sandbox. It does not replace operating-system permissions, repository protection, isolated execution, Hermes approvals, or human review.
 
 ## Stage-aware mutation
 
@@ -18,4 +18,4 @@ Blocks and approval requests record exact rule keys, tool names, argument-key na
 
 ## Trust boundary
 
-Project-local configuration and plugins execute with the user's local authority. Crucible does not make untrusted code safe. Use worktrees, containers, remote backends, OS controls, and protected branches appropriate to the risk.
+Project-local configuration and plugins execute with the user's local authority. Hardproof does not make untrusted code safe. Use worktrees, containers, remote backends, OS controls, and protected branches appropriate to the risk.

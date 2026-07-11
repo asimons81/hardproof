@@ -4,7 +4,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from crucible_agent.domain.enums import (
+from hardproof.domain.enums import (
     ApprovalGate,
     ArtifactKind,
     EvidenceStatus,
@@ -12,11 +12,11 @@ from crucible_agent.domain.enums import (
     RunProfile,
     TaskStatus,
 )
-from crucible_agent.domain.models import Approval, Artifact, Decision, Evidence, Run, Task
-from crucible_agent.services.reports import ReportService
-from crucible_agent.storage.database import Database
-from crucible_agent.storage.migrations import migrate
-from crucible_agent.storage.repository import RunRepository
+from hardproof.domain.models import Approval, Artifact, Decision, Evidence, Run, Task
+from hardproof.services.reports import ReportService
+from hardproof.storage.database import Database
+from hardproof.storage.migrations import migrate
+from hardproof.storage.repository import RunRepository
 
 
 NOW = "2026-07-11T10:00:00Z"
@@ -26,11 +26,11 @@ def setup(tmp_path: Path) -> tuple[ReportService, RunRepository, Run]:
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     subprocess.run(["git", "-C", str(tmp_path), "config", "user.email", "test@example.com"], check=True)
     subprocess.run(["git", "-C", str(tmp_path), "config", "user.name", "Test"], check=True)
-    (tmp_path / ".gitignore").write_text(".crucible/\n", encoding="utf-8")
+    (tmp_path / ".gitignore").write_text(".hardproof/\n", encoding="utf-8")
     (tmp_path / "code.py").write_text("VALUE=1\n", encoding="utf-8")
     subprocess.run(["git", "-C", str(tmp_path), "add", ".gitignore", "code.py"], check=True)
     subprocess.run(["git", "-C", str(tmp_path), "commit", "-qm", "initial"], check=True)
-    database = Database(tmp_path / ".crucible/state/crucible.db")
+    database = Database(tmp_path / ".hardproof/state/hardproof.db")
     migrate(database)
     repository = RunRepository(database)
     run = Run.create(str(tmp_path), "Build feature token=never-export", RunProfile.STANDARD, now=NOW)
@@ -56,9 +56,9 @@ def setup(tmp_path: Path) -> tuple[ReportService, RunRepository, Run]:
         subprocess.run(["git", "-C", str(tmp_path), "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip(),
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        ".crucible/runs/evidence.log", "c" * 64, NOW, NOW,
+        ".hardproof/runs/evidence.log", "c" * 64, NOW, NOW,
     ))
-    return ReportService(repository, tmp_path, tmp_path / ".crucible/runs" / run.id), repository, run
+    return ReportService(repository, tmp_path, tmp_path / ".hardproof/runs" / run.id), repository, run
 
 
 def test_completion_markdown_has_every_required_section_and_no_secret(tmp_path: Path) -> None:
@@ -102,4 +102,4 @@ def test_explicit_destination_and_relative_evidence_links(tmp_path: Path) -> Non
     paths = reports.export(run.id, destination=destination, format="markdown")
     assert paths == {"markdown": destination}
     text = destination.read_text(encoding="utf-8")
-    assert ".crucible/runs/evidence.log" in text
+    assert ".hardproof/runs/evidence.log" in text

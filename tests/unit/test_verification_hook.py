@@ -3,11 +3,11 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from crucible_agent.commands.shared import CommandContext, CommandService
-from crucible_agent.domain.enums import RunStage
-from crucible_agent.hooks.verification import VerificationHook
-from crucible_agent.services.evidence import CommandResult, EvidenceService
-from crucible_agent.services.sessions import SessionService
+from hardproof.commands.shared import CommandContext, CommandService
+from hardproof.domain.enums import RunStage
+from hardproof.hooks.verification import VerificationHook
+from hardproof.services.evidence import CommandResult, EvidenceService
+from hardproof.services.sessions import SessionService
 
 
 class Runner:

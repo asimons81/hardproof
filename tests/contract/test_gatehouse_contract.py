@@ -4,8 +4,8 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from crucible_agent.domain.models import PolicyDecision
-from crucible_agent.policy.trace import IMMUTABLE_RULE_PREFIX, STABLE_V01_RULE_KEYS, RuleTrace
+from hardproof.domain.models import PolicyDecision
+from hardproof.policy.trace import IMMUTABLE_RULE_PREFIX, STABLE_V01_RULE_KEYS, RuleTrace
 
 
 def test_v02_policy_trace_is_immutable_ordered_and_serializable() -> None:

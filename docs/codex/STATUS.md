@@ -1,4 +1,4 @@
-# Crucible Codex Status
+# Hardproof Codex Status
 
 - Current release: v0.2.0
 - Current release phase: Gatehouse Task 8 bounded stage-graph configuration

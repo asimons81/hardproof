@@ -34,7 +34,7 @@ def main() -> int:
     ]
     if not artifacts:
         parser.error(f"no wheel or sdist artifacts found in {directory}")
-    sbom = directory / "crucible-agent.cdx.json"
+    sbom = directory / "hardproof.cdx.json"
     subprocess.run(
         [
             sys.executable, "-m", "cyclonedx_py", "environment",

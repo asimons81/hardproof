@@ -32,18 +32,18 @@ jobs:
       - name: Verify tag matches package and manifest version
         run: |
           python - <<'PY'
-          import pathlib, tomllib, yaml, crucible_agent, os
+          import pathlib, tomllib, yaml, hardproof, os
           version = tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version']
           manifest = yaml.safe_load(pathlib.Path('plugin.yaml').read_text())['version']
           tag = os.environ['GITHUB_REF_NAME'].removeprefix('v')
-          assert tag == version == str(manifest) == crucible_agent.__version__
+          assert tag == version == str(manifest) == hardproof.__version__
           PY
       - run: python -m pytest
-      - run: python -m ruff check crucible_agent tests scripts
-      - run: python -m mypy crucible_agent
+      - run: python -m ruff check hardproof tests scripts
+      - run: python -m mypy hardproof
       - run: python -m build
       - run: python -m twine check dist/*.whl dist/*.tar.gz
-      - run: python scripts/smoke_install.py dist/crucible_agent-*.whl
+      - run: python scripts/smoke_install.py dist/hardproof-*.whl
       - name: Generate CycloneDX SBOM and SHA256 checksums
         run: python scripts/build_sbom.py dist
       - uses: actions/attest-build-provenance@v2

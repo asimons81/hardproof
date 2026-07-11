@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from crucible_agent.domain.enums import RiskLevel, RunProfile, RunStage
-from crucible_agent.domain.models import PolicyDecisionRecord, RiskSuggestion, Waiver
-from crucible_agent.policy.trace import RuleTrace
+from hardproof.domain.enums import RiskLevel, RunProfile, RunStage
+from hardproof.domain.models import PolicyDecisionRecord, RiskSuggestion, Waiver
+from hardproof.policy.trace import RuleTrace
 
 
 NOW = "2026-07-11T18:00:00Z"

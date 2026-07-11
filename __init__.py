@@ -1,5 +1,5 @@
-"""Directory-plugin wrapper for Crucible."""
+"""Directory-plugin wrapper for Hardproof."""
 
-from crucible_agent.plugin import register
+from hardproof.plugin import register
 
 __all__ = ["register"]

@@ -3,13 +3,13 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "crucible-agent"
+name = "hardproof"
 version = "0.2.0"
 description = "A persistent, risk-aware engineering protocol for Hermes Agent"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
-authors = [{ name = "Crucible Agent contributors" }]
+authors = [{ name = "Hardproof contributors" }]
 dependencies = ["PyYAML>=6,<7"]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -36,14 +36,14 @@ dev = [
 ]
 
 [project.entry-points."hermes_agent.plugins"]
-crucible = "crucible_agent.plugin"
+hardproof = "hardproof.plugin"
 
 [tool.setuptools]
-packages = { find = { include = ["crucible_agent*"] } }
+packages = { find = { include = ["hardproof*"] } }
 include-package-data = true
 
 [tool.setuptools.package-data]
-crucible_agent = [
+hardproof = [
   "py.typed",
   "migrations/*.sql",
   "templates/*.md",
@@ -60,5 +60,5 @@ line-length = 100
 [tool.mypy]
 python_version = "3.11"
 strict = true
-packages = ["crucible_agent"]
+packages = ["hardproof"]
 explicit_package_bases = true

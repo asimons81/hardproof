@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/asimons81/crucible-agent/security/advisories/new
+    url: https://github.com/asimons81/hardproof/security/advisories/new
     about: Report security issues privately
   - name: Usage discussion
-    url: https://github.com/asimons81/crucible-agent/discussions
+    url: https://github.com/asimons81/hardproof/discussions
     about: Ask questions and share workflow experience

@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from crucible_agent.domain.snapshots import capture_git_snapshot
+from hardproof.domain.snapshots import capture_git_snapshot
 
 
 def git_repo(path: Path) -> None:

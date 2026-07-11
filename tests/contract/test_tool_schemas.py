@@ -1,11 +1,11 @@
 import jsonschema
 
-from crucible_agent.tools.schemas import TOOL_SCHEMAS
+from hardproof.tools.schemas import TOOL_SCHEMAS
 
 
 EXPECTED = {
-    "crucible_run", "crucible_record", "crucible_task",
-    "crucible_transition", "crucible_verify", "crucible_report",
+    "hardproof_run", "hardproof_record", "hardproof_task",
+    "hardproof_transition", "hardproof_verify", "hardproof_report",
 }
 
 
@@ -23,6 +23,6 @@ def test_model_tools_have_no_human_approval_action() -> None:
     assert '"approve"' not in serialized
     assert "create_approval" not in serialized
     assert "waivers_create" not in serialized
-    report_actions = TOOL_SCHEMAS["crucible_report"]["parameters"]["properties"]["action"]["enum"]
+    report_actions = TOOL_SCHEMAS["hardproof_report"]["parameters"]["properties"]["action"]["enum"]
     assert "policy_explain" in report_actions
     assert "risk_suggest" in report_actions

@@ -6,18 +6,18 @@ import sqlite3
 
 import pytest
 
-from crucible_agent.domain.enums import EvidenceStatus, RiskLevel, RunProfile, RunStage
-from crucible_agent.domain.models import (
+from hardproof.domain.enums import EvidenceStatus, RiskLevel, RunProfile, RunStage
+from hardproof.domain.models import (
     Evidence,
     PolicyDecisionRecord,
     RiskSuggestion,
     Run,
     Waiver,
 )
-from crucible_agent.policy.trace import RuleTrace
-from crucible_agent.storage.database import Database
-from crucible_agent.storage.migrations import apply_migration_sql, migrate
-from crucible_agent.storage.repository import RunRepository
+from hardproof.policy.trace import RuleTrace
+from hardproof.storage.database import Database
+from hardproof.storage.migrations import apply_migration_sql, migrate
+from hardproof.storage.repository import RunRepository
 
 
 NOW = "2026-07-11T18:00:00Z"
@@ -32,7 +32,7 @@ def repository_at(path: Path) -> RunRepository:
 
 def test_v1_database_upgrades_without_losing_run_or_evidence(tmp_path: Path) -> None:
     database = Database(tmp_path / "state.db")
-    sql = resources.files("crucible_agent.migrations").joinpath("001_initial.sql").read_text()
+    sql = resources.files("hardproof.migrations").joinpath("001_initial.sql").read_text()
     with database.connect() as connection:
         apply_migration_sql(connection, 1, sql)
     repository = RunRepository(database)

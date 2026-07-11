@@ -1,6 +1,6 @@
 # Code of Conduct
 
-Crucible contributors and maintainers commit to a respectful, harassment-free community.
+Hardproof contributors and maintainers commit to a respectful, harassment-free community.
 
 ## Expected behavior
 
@@ -14,4 +14,4 @@ Harassment, threats, discrimination, sexualized conduct, doxxing, deliberate int
 
 Report conduct concerns privately through the repository's maintainer contact or GitHub reporting controls. Maintainers will limit disclosure, assess evidence, avoid conflicts of interest, and may warn, moderate, temporarily restrict, or permanently remove participants. Good-faith reporters will not face retaliation.
 
-This policy applies to issues, pull requests, discussions, release channels, community spaces, and public representation of Crucible.
+This policy applies to issues, pull requests, discussions, release channels, community spaces, and public representation of Hardproof.

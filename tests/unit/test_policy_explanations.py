@@ -4,10 +4,10 @@ import json
 import subprocess
 from pathlib import Path
 
-from crucible_agent.commands.shared import CommandContext, CommandService
-from crucible_agent.domain.enums import RunStage
-from crucible_agent.hooks.tool_policy import ToolPolicyHook
-from crucible_agent.services.sessions import SessionService
+from hardproof.commands.shared import CommandContext, CommandService
+from hardproof.domain.enums import RunStage
+from hardproof.hooks.tool_policy import ToolPolicyHook
+from hardproof.services.sessions import SessionService
 
 
 def setup(tmp_path: Path) -> tuple[CommandService, ToolPolicyHook]:

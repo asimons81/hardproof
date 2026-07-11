@@ -4,16 +4,16 @@ from pathlib import Path
 
 import pytest
 
-from crucible_agent.config import ConfigError, config_fingerprint, load_config
-from crucible_agent.domain.enums import RunProfile, RunStage
+from hardproof.config import ConfigError, config_fingerprint, load_config
+from hardproof.domain.enums import RunProfile, RunStage
 
 
 def test_missing_config_loads_safe_defaults_without_creating_file(tmp_path: Path) -> None:
-    path = tmp_path / ".crucible" / "config.yaml"
+    path = tmp_path / ".hardproof" / "config.yaml"
     config = load_config(path)
     assert config.schema_version == 2
     assert config.default_profile is RunProfile.STANDARD
-    assert config.artifact_directory == Path(".crucible/runs")
+    assert config.artifact_directory == Path(".hardproof/runs")
     assert config.verification_checks
     assert not path.exists()
 
@@ -54,10 +54,10 @@ def test_artifact_path_rejects_traversal(tmp_path: Path) -> None:
 
 
 def test_environment_expansion_only_applies_to_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("CRUCIBLE_ARTIFACT_ROOT", "project-artifacts")
+    monkeypatch.setenv("HARDPROOF_ARTIFACT_ROOT", "project-artifacts")
     path = tmp_path / "config.yaml"
     path.write_text(
-        "schema_version: 1\nartifact_directory: ${CRUCIBLE_ARTIFACT_ROOT}/runs\n",
+        "schema_version: 1\nartifact_directory: ${HARDPROOF_ARTIFACT_ROOT}/runs\n",
         encoding="utf-8",
     )
     assert load_config(path).artifact_directory == Path("project-artifacts/runs")

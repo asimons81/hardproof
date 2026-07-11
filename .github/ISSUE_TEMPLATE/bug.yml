@@ -1,5 +1,5 @@
 name: Bug report
-description: Report reproducible incorrect Crucible behavior
+description: Report reproducible incorrect Hardproof behavior
 title: "bug: "
 labels: [bug]
 body:
@@ -10,7 +10,7 @@ body:
     id: versions
     attributes:
       label: Versions and platform
-      description: Crucible, Hermes, Python, and operating-system versions
+      description: Hardproof, Hermes, Python, and operating-system versions
     validations:
       required: true
   - type: textarea

@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from crucible_agent.compat import CompatibilityError, inspect_context, require_compatible
+from hardproof.compat import CompatibilityError, inspect_context, require_compatible
 
 
 class CompleteContext:

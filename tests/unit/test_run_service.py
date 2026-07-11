@@ -1,16 +1,16 @@
 from pathlib import Path
 
-from crucible_agent.domain.enums import RunProfile, RunStage
-from crucible_agent.domain.models import Run
-from crucible_agent.policy.stage_rules import TransitionFacts
-from crucible_agent.services.runs import RunService
-from crucible_agent.storage.database import Database
-from crucible_agent.storage.migrations import migrate
-from crucible_agent.storage.repository import RunRepository
+from hardproof.domain.enums import RunProfile, RunStage
+from hardproof.domain.models import Run
+from hardproof.policy.stage_rules import TransitionFacts
+from hardproof.services.runs import RunService
+from hardproof.storage.database import Database
+from hardproof.storage.migrations import migrate
+from hardproof.storage.repository import RunRepository
 
 
 def test_quick_skip_reason_is_durably_recorded(tmp_path: Path) -> None:
-    database = Database(tmp_path / "crucible.db")
+    database = Database(tmp_path / "hardproof.db")
     migrate(database)
     repository = RunRepository(database)
     run = Run.create(str(tmp_path), "localized fix", RunProfile.QUICK)
@@ -26,7 +26,7 @@ def test_quick_skip_reason_is_durably_recorded(tmp_path: Path) -> None:
 
 
 def test_denied_transition_does_not_mutate_run(tmp_path: Path) -> None:
-    database = Database(tmp_path / "crucible.db")
+    database = Database(tmp_path / "hardproof.db")
     migrate(database)
     repository = RunRepository(database)
     run = Run.create(str(tmp_path), "standard change", RunProfile.STANDARD)
@@ -39,7 +39,7 @@ def test_denied_transition_does_not_mutate_run(tmp_path: Path) -> None:
 
 
 def test_pause_and_resume_restore_durable_prior_stage(tmp_path: Path) -> None:
-    database = Database(tmp_path / "crucible.db")
+    database = Database(tmp_path / "hardproof.db")
     migrate(database)
     repository = RunRepository(database)
     run = Run.create(str(tmp_path), "pauseable change", RunProfile.STANDARD)

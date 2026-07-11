@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from crucible_agent.commands.shared import CommandContext, CommandService
-from crucible_agent.domain.enums import RiskLevel
-from crucible_agent.services.risks import RiskService, classify_risk
+from hardproof.commands.shared import CommandContext, CommandService
+from hardproof.domain.enums import RiskLevel
+from hardproof.services.risks import RiskService, classify_risk
 
 
 NOW = "2026-07-11T22:00:00Z"

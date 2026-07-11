@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from crucible_agent.config import PolicyConfig, PolicyRuleConfig
-from crucible_agent.domain.enums import RunProfile, RunStage, RunStatus
-from crucible_agent.domain.models import Run
-from crucible_agent.domain.models import Waiver
-from crucible_agent.policy.tool_rules import ToolPolicyContext, evaluate_tool_call
+from hardproof.config import PolicyConfig, PolicyRuleConfig
+from hardproof.domain.enums import RunProfile, RunStage, RunStatus
+from hardproof.domain.models import Run
+from hardproof.domain.models import Waiver
+from hardproof.policy.tool_rules import ToolPolicyContext, evaluate_tool_call
 
 
 NOW = "2026-07-11T20:00:00Z"
@@ -26,7 +26,7 @@ def rule(key: str, effect: str, **kwargs: object) -> PolicyRuleConfig:
 
 def context(tmp_path: Path, rules: tuple[PolicyRuleConfig, ...], stage: RunStage = RunStage.IMPLEMENT) -> ToolPolicyContext:
     return ToolPolicyContext(
-        run(stage), tmp_path, tmp_path / ".crucible/runs/run-1",
+        run(stage), tmp_path, tmp_path / ".hardproof/runs/run-1",
         policy=PolicyConfig("profile", rules, (), {}), config_sha256="a" * 64,
     )
 
@@ -70,9 +70,9 @@ def test_project_allow_cannot_bypass_stage_source_block(tmp_path: Path) -> None:
 
 
 def test_matching_allow_explains_already_safe_artifact_write(tmp_path: Path) -> None:
-    rules = (rule("project.artifact.allow", "allow", tools=("write_file",), path_glob=".crucible/runs/**"),)
+    rules = (rule("project.artifact.allow", "allow", tools=("write_file",), path_glob=".hardproof/runs/**"),)
     decision = evaluate_tool_call(
-        "write_file", {"path": ".crucible/runs/run-1/design.md"},
+        "write_file", {"path": ".hardproof/runs/run-1/design.md"},
         context(tmp_path, rules, RunStage.DESIGN),
     )
     assert decision.action == "allow" and decision.rule_key == "project.artifact.allow"

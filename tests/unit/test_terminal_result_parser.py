@@ -1,6 +1,6 @@
 import json
 
-from crucible_agent.services.evidence import parse_terminal_result
+from hardproof.services.evidence import parse_terminal_result
 
 
 def test_parses_known_hermes_terminal_forms() -> None:

@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from crucible_agent.commands.shared import CommandContext, CommandService
-from crucible_agent.domain.enums import RunProfile, RunStage
-from crucible_agent.services.waivers import WaiverService, WaiverScope, match_waiver
+from hardproof.commands.shared import CommandContext, CommandService
+from hardproof.domain.enums import RunProfile, RunStage
+from hardproof.services.waivers import WaiverService, WaiverScope, match_waiver
 
 
 NOW = "2026-07-11T20:00:00Z"

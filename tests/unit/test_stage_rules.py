@@ -4,7 +4,7 @@ from itertools import product
 
 import pytest
 
-from crucible_agent.domain.enums import (
+from hardproof.domain.enums import (
     ApprovalGate,
     ArtifactKind,
     EvidenceStatus,
@@ -13,8 +13,8 @@ from crucible_agent.domain.enums import (
     RunStatus,
     TaskStatus,
 )
-from crucible_agent.domain.models import Approval, Artifact, Evidence, Run, Task
-from crucible_agent.policy.stage_rules import TransitionFacts, evaluate_transition
+from hardproof.domain.models import Approval, Artifact, Evidence, Run, Task
+from hardproof.policy.stage_rules import TransitionFacts, evaluate_transition
 
 
 NOW = "2026-07-11T05:00:00Z"
