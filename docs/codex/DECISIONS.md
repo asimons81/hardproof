@@ -7,3 +7,4 @@
 | 2026-07-11 | Persist each project's protocol state in migrated SQLite with short-lived WAL connections. | `docs/adr/0003-project-local-sqlite.md` | Accepted |
 | 2026-07-11 | Enforce stage-aware mutation with deterministic classification and Hermes approval escalation. | `docs/adr/0005-stage-aware-tool-policy.md` | Accepted |
 | 2026-07-11 | Bind verification to HEAD, tracked diff bytes, and ignored-aware untracked content. | `docs/adr/0004-evidence-freshness.md` | Accepted |
+| 2026-07-11 | Use one evaluator with ordered immutable traces, frozen rule keys, and a caller-supplied clock. | `docs/adr/0006-ordered-policy-traces.md` | Accepted |

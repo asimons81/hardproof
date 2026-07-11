@@ -38,7 +38,7 @@ class LocalPytestRunner:
     def run(self, command: str, timeout_seconds: int) -> CommandResult:
         assert command == "python -m pytest"
         completed = subprocess.run(
-            [sys.executable, "-m", "pytest", "-q"],
+            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider"],
             cwd=self.project_root,
             capture_output=True,
             text=True,
@@ -52,7 +52,10 @@ def git_project(root: Path) -> None:
     subprocess.run(["git", "init", "-q", str(root)], check=True)
     subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.com"], check=True)
     subprocess.run(["git", "-C", str(root), "config", "user.name", "Test"], check=True)
-    (root / ".gitignore").write_text(".hardproof/\n__pycache__/\n", encoding="utf-8")
+    (root / ".gitignore").write_text(
+        ".hardproof/\n__pycache__/\n.pytest_cache/\n.DS_Store\n*.pyc\n*.pyo\n",
+        encoding="utf-8",
+    )
     (root / "tiny.py").write_text("def value():\n    return 1\n", encoding="utf-8")
     (root / "test_tiny.py").write_text("from tiny import value\n\ndef test_value():\n    assert value() == 1\n", encoding="utf-8")
     subprocess.run(["git", "-C", str(root), "add", "."], check=True)

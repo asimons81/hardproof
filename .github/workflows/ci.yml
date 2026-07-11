@@ -27,17 +27,19 @@ jobs:
       - name: mypy
         run: python -m mypy hardproof
       - name: Coverage
-        run: python -m pytest --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=85
+        run: python -m pytest --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=90
       - name: Critical module coverage
         run: >-
           python -m pytest
           tests/unit/test_domain_transitions.py tests/unit/test_stage_rules.py
+          tests/unit/test_stage_graph.py tests/unit/test_policy_engine.py tests/unit/test_commands.py
           tests/unit/test_run_service.py tests/unit/test_tool_policy.py
           tests/unit/test_tool_policy_hook.py tests/unit/test_approval_service.py
           tests/unit/test_database.py tests/unit/test_evidence_service.py
           tests/unit/test_terminal_result_parser.py tests/unit/test_snapshots.py
           tests/unit/test_verification_hook.py
           --cov=hardproof.policy.stage_rules
+          --cov=hardproof.policy.stage_graph
           --cov=hardproof.policy.tool_rules
           --cov=hardproof.services.approvals
           --cov=hardproof.storage.migrations

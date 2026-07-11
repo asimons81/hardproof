@@ -8,6 +8,7 @@ from hardproof.domain.enums import ApprovalGate, ArtifactKind, RunProfile, RunSt
 from hardproof.domain.models import Approval, Artifact, Evidence, Run, Task, TransitionResult
 from hardproof.domain.transitions import FORWARD_STAGE, TERMINAL_STAGES
 from hardproof.policy.verification_rules import verification_blocker
+from hardproof.policy.stage_graph import StageGraph
 
 
 HUMAN_APPROVAL_SOURCES = frozenset({"slash", "cli", "gateway", "desktop", "telegram", "discord", "slack"})
@@ -96,6 +97,7 @@ def evaluate_transition(
     facts: TransitionFacts,
     *,
     skip_reason: str | None = None,
+    stage_graph: StageGraph | None = None,
 ) -> TransitionResult:
     """Evaluate structural and profile requirements without mutating state."""
     target = RunStage(target)
@@ -105,9 +107,18 @@ def evaluate_transition(
         return TransitionResult.allow(target)
     if target is RunStage.PAUSED and run.stage is not RunStage.PAUSED:
         return TransitionResult.allow(target)
-    expected = FORWARD_STAGE.get(run.stage)
+    expected = (
+        stage_graph.successors(run.stage)[0]
+        if stage_graph is not None and stage_graph.successors(run.stage)
+        else FORWARD_STAGE.get(run.stage)
+    )
     if target is expected:
         blockers = _gate_for_forward(run, target, facts)
+        if run.stage is RunStage.DELIVER and target is RunStage.COMPLETE:
+            if not facts.has_artifact(ArtifactKind.COMPLETION):
+                blockers.append("completion report draft missing")
+            if run.profile is RunProfile.CRITICAL:
+                blockers.append("critical profile cannot skip LEARN")
         return TransitionResult.deny(target, *blockers) if blockers else TransitionResult.allow(target)
     is_forward_jump = (
         run.profile is RunProfile.QUICK

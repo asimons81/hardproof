@@ -22,7 +22,7 @@ def test_ci_has_required_platform_matrix_and_jobs() -> None:
         "pip-audit", "license", "coverage",
     ):
         assert requirement in serialized
-    assert "--cov-fail-under=85" in serialized
+    assert "--cov-fail-under=90" in serialized
     assert "--cov-fail-under=95" in serialized
 
 

@@ -5,11 +5,12 @@ from __future__ import annotations
 import sqlite3
 from importlib import resources
 
+from hardproof.constants import DATABASE_SCHEMA_VERSION
 from hardproof.domain.models import utc_now
 from hardproof.storage.database import Database
 
 
-LATEST_SCHEMA_VERSION = 1
+LATEST_SCHEMA_VERSION = DATABASE_SCHEMA_VERSION
 
 
 class MigrationError(RuntimeError):
@@ -48,8 +49,14 @@ def apply_migration_sql(connection: sqlite3.Connection, version: int, sql: str) 
 
 
 def _load(version: int) -> str:
-    name = f"{version:03d}_initial.sql"
-    return resources.files("hardproof.migrations").joinpath(name).read_text(encoding="utf-8")
+    directory = resources.files("hardproof.migrations")
+    matches = sorted(
+        (item for item in directory.iterdir() if item.name.startswith(f"{version:03d}_")),
+        key=lambda item: item.name,
+    )
+    if len(matches) != 1:
+        raise MigrationError(f"expected one migration for schema {version}; found {len(matches)}")
+    return matches[0].read_text(encoding="utf-8")
 
 
 def migrate(database: Database) -> tuple[int, ...]:
@@ -71,3 +78,26 @@ def migrate(database: Database) -> tuple[int, ...]:
             apply_migration_sql(connection, version, _load(version))
             applied.append(version)
         return tuple(applied)
+
+
+def migration_status(database: Database) -> dict[str, object]:
+    """Return deterministic schema and integrity diagnostics."""
+    with database.connect() as connection:
+        table_exists = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_migrations'"
+        ).fetchone()
+        current = 0
+        history: list[int] = []
+        if table_exists:
+            history = [int(row[0]) for row in connection.execute(
+                "SELECT version FROM schema_migrations ORDER BY version"
+            )]
+            current = max(history, default=0)
+        integrity = str(connection.execute("PRAGMA integrity_check").fetchone()[0])
+    pending = list(range(current + 1, LATEST_SCHEMA_VERSION + 1))
+    return {
+        "database": str(database.path), "schema_version": current,
+        "supported_schema_version": LATEST_SCHEMA_VERSION, "migration_history": history,
+        "pending_migrations": pending, "failed_migrations": [], "integrity": integrity,
+        "mutation_occurred": False,
+    }

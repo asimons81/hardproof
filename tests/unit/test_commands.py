@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import subprocess
+import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -54,9 +56,43 @@ def test_config_init_validate_db_migrate_and_doctor(tmp_path: Path) -> None:
     assert service.paths.config.exists()
     assert service.execute(["config", "validate"]).ok
     assert service.execute(["db", "migrate"]).ok
+    status = json.loads(service.execute(["db", "status"]).text)
+    assert status["schema_version"] == 2
+    assert status["pending_migrations"] == []
+    assert status["mutation_occurred"] is False
+    dry_run = json.loads(service.execute(["db", "migrate", "--dry-run"]).text)
+    assert dry_run["mutation_occurred"] is False
+    explained = json.loads(service.execute(["config", "explain"]).text)
+    assert explained["schema_version"] == 2
+    assert explained["stage_graph"]["required_stages"] == ["VERIFY", "DELIVER", "COMPLETE"]
     doctor = service.execute(["doctor"])
     assert "Git repository" in doctor.text
     assert "Database" in doctor.text
+
+
+def test_legacy_state_migration_preserves_database_and_writes_recovery_report(tmp_path: Path) -> None:
+    service = CommandService(context(tmp_path))
+    old_database = tmp_path / ".crucible" / "state" / "hardproof.db"
+    old_database.parent.mkdir(parents=True)
+    shutil.copy2(service.paths.database, old_database)
+    result = service.execute(["migrate-state"])
+    assert result.ok
+    assert (tmp_path / ".hardproof.backup" / "state" / "hardproof.db").exists()
+    report = json.loads((tmp_path / ".hardproof" / "migration-report.json").read_text())
+    assert report["database_integrity"] == "ok"
+    assert "Rollback" in result.text
+
+
+def test_legacy_state_conflict_fails_without_overwriting_active_state(tmp_path: Path) -> None:
+    service = CommandService(context(tmp_path))
+    old = tmp_path / ".crucible"
+    old.mkdir()
+    (old / "keep.txt").write_text("old", encoding="utf-8")
+    (service.paths.root / "keep.txt").write_text("new", encoding="utf-8")
+    result = service.execute(["migrate-state"])
+    assert not result.ok
+    assert "Resolve manually" in result.text
+    assert (service.paths.root / "keep.txt").read_text(encoding="utf-8") == "new"
 
 
 def test_evidence_and_export_are_deterministic_and_secret_safe(tmp_path: Path) -> None:
@@ -90,6 +126,10 @@ def test_slash_and_cli_use_same_command_service_output(tmp_path: Path) -> None:
         ["waive", "gate", "reason"], ["pause"], ["resume"], ["abort", "reason"],
         ["evidence"], ["export"], ["doctor"], ["runs"], ["show", "run-id"],
         ["config", "init"], ["config", "validate"], ["db", "migrate"], ["complete"],
+        ["config", "explain"], ["db", "status"], ["db", "migrate", "--dry-run"],
+        ["policy", "waivers", "list"],
+        ["policy", "explain", "--tool", "terminal", "--args-json", "{}"],
+        ["policy", "suggest-risk", "--text", "change"],
     ],
 )
 def test_cli_parser_accepts_every_documented_subcommand(argv: list[str]) -> None:
@@ -103,3 +143,25 @@ def test_malformed_slash_arguments_return_concise_error(tmp_path: Path, raw: str
     output = asyncio.run(handler(raw))
     assert output.startswith("Hardproof error:")
     assert len(output) < 500
+
+
+def test_policy_waiver_commands_are_human_only_and_share_cli_slash_path(tmp_path: Path) -> None:
+    service = CommandService(context(tmp_path, source="cli"))
+    service.execute(["start", "standard", "waiver command"])
+    created = service.execute([
+        "policy", "waivers", "create", "generated", "stage.before_implement.source_mutation",
+        "--expires", "2026-07-12T20:00:00Z", "--reason", "reviewed",
+        "--tool", "write_file", "--path", "generated/**", "--stage", "DESIGN",
+    ])
+    assert created.ok and "generated" in created.text
+    assert "generated" in service.execute(["policy", "waivers", "list"]).text
+    assert service.execute([
+        "policy", "waivers", "revoke", "generated", "--reason", "complete"
+    ]).ok
+
+    model = CommandService(CommandContext(tmp_path, actor="model", source="tool"))
+    with pytest.raises(PermissionError, match="human"):
+        model.execute([
+            "policy", "waivers", "create", "forbidden", "project.rule",
+            "--expires", "2026-07-12T20:00:00Z", "--reason", "no",
+        ])
