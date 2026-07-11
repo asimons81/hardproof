@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import subprocess
+import json
 from pathlib import Path
 
 import pytest
@@ -54,6 +55,15 @@ def test_config_init_validate_db_migrate_and_doctor(tmp_path: Path) -> None:
     assert service.paths.config.exists()
     assert service.execute(["config", "validate"]).ok
     assert service.execute(["db", "migrate"]).ok
+    status = json.loads(service.execute(["db", "status"]).text)
+    assert status["schema_version"] == 2
+    assert status["pending_migrations"] == []
+    assert status["mutation_occurred"] is False
+    dry_run = json.loads(service.execute(["db", "migrate", "--dry-run"]).text)
+    assert dry_run["mutation_occurred"] is False
+    explained = json.loads(service.execute(["config", "explain"]).text)
+    assert explained["schema_version"] == 2
+    assert explained["stage_graph"]["required_stages"] == ["VERIFY", "DELIVER", "COMPLETE"]
     doctor = service.execute(["doctor"])
     assert "Git repository" in doctor.text
     assert "Database" in doctor.text
@@ -90,6 +100,7 @@ def test_slash_and_cli_use_same_command_service_output(tmp_path: Path) -> None:
         ["waive", "gate", "reason"], ["pause"], ["resume"], ["abort", "reason"],
         ["evidence"], ["export"], ["doctor"], ["runs"], ["show", "run-id"],
         ["config", "init"], ["config", "validate"], ["db", "migrate"], ["complete"],
+        ["config", "explain"], ["db", "status"], ["db", "migrate", "--dry-run"],
         ["policy", "waivers", "list"],
         ["policy", "explain", "--tool", "terminal", "--args-json", "{}"],
         ["policy", "suggest-risk", "--text", "change"],

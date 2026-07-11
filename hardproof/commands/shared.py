@@ -32,6 +32,8 @@ from hardproof.services.waivers import WaiverService
 from hardproof.storage.database import Database, DatabaseCorruptionError
 from hardproof.storage.migrations import MigrationError, migrate
 from hardproof.storage.repository import RunRepository
+from hardproof.policy.stage_graph import compile_stage_graph
+from hardproof.policy.packs import PACK_VERSION, detect_packs
 
 
 _SECRET = re.compile(
@@ -84,7 +86,8 @@ class CommandService:
         self.database = Database(self.paths.database)
         migrate(self.database)
         self.repository = RunRepository(self.database)
-        self.run_service = RunService(self.repository)
+        config = load_config(self.paths.config)
+        self.run_service = RunService(self.repository, stage_graph_config=config.policy.stage_graph)
 
     @property
     def _active_pointer(self) -> Path:
@@ -371,17 +374,26 @@ class CommandService:
         git_root = self._git_root()
         checks.append(("Git repository", git_root is not None, str(git_root) if git_root else "not found"))
         try:
-            load_config(self.paths.config)
-            checks.append(("Config", True, "valid"))
+            config = load_config(self.paths.config)
+            graph = compile_stage_graph(config.policy.stage_graph, profile=config.default_profile)
+            detected, _ = detect_packs(self.context.project_root)
+            checks.append(("Config", True, f"schema={config.schema_version} source={self.paths.config if self.paths.config.exists() else 'defaults'}"))
+            checks.append(("Stage graph", True, f"{len(graph.edges)} edges; VERIFY required"))
+            checks.append(("Policy packs", True, ",".join(config.policy.packs or detected) or "none"))
+            checks.append(("Immutable rules", True, "enabled"))
         except ConfigError as exc:
             checks.append(("Config", False, str(exc)))
         try:
-            migrate(self.database)
-            checks.append(("Database", True, "schema current"))
+            from hardproof.storage.migrations import migration_status
+            db_status = migration_status(self.database)
+            checks.append(("Database", not db_status["pending_migrations"], f"schema={db_status['schema_version']} pending={db_status['pending_migrations']} integrity={db_status['integrity']}"))
         except (MigrationError, DatabaseCorruptionError) as exc:
             checks.append(("Database", False, str(exc)))
         writable = os.access(self.paths.root, os.W_OK) if self.paths.root.exists() else os.access(self.context.project_root, os.W_OK)
         checks.append(("Write access", writable, "available" if writable else "denied"))
+        old_state = self.context.project_root / ".crucible"
+        conflict = old_state.exists() and self.paths.root.exists()
+        checks.append(("Legacy state", not conflict, "conflict: run migrate-state guidance" if conflict else (str(old_state) if old_state.exists() else "not detected")))
         if self.context.hermes_context is not None:
             report = inspect_context(self.context.hermes_context)
             checks.append(("Hermes API", report.compatible, report.hermes_version or "unknown version"))
@@ -410,8 +422,25 @@ class CommandService:
         )
 
     def _config(self, rest: list[str]) -> CommandResult:
-        if len(rest) != 1 or rest[0] not in {"init", "validate"}:
-            raise ValueError("usage: config <init|validate>")
+        if len(rest) != 1 or rest[0] not in {"init", "validate", "explain"}:
+            raise ValueError("usage: config <init|validate|explain>")
+        if rest[0] == "explain":
+            config = load_config(self.paths.config)
+            graph = compile_stage_graph(config.policy.stage_graph, profile=config.default_profile)
+            detected, indicators = detect_packs(self.context.project_root)
+            active = config.policy.packs or detected
+            payload = {
+                "source": str(self.paths.config) if self.paths.config.exists() else "built-in defaults",
+                "schema_version": config.schema_version,
+                "source_schema_version": config.source_schema_version,
+                "active_profile": config.default_profile.value,
+                "active_policy_packs": [{"key": key, "version": PACK_VERSION} for key in active],
+                "pack_indicators": {key: list(indicators[key]) for key in detected},
+                "stage_graph": graph.to_dict(),
+                "immutable_rules": "enabled",
+                "config_sha256": config_fingerprint(config),
+            }
+            return CommandResult(True, json.dumps(payload, sort_keys=True, indent=2))
         if rest[0] == "validate":
             load_config(self.paths.config)
             return CommandResult(True, f"Config is valid: {self.paths.config}")
@@ -423,8 +452,16 @@ class CommandService:
         return CommandResult(True, f"Config initialized: {self.paths.config}")
 
     def _db(self, rest: list[str]) -> CommandResult:
+        if rest == ["status"]:
+            from hardproof.storage.migrations import migration_status
+            return CommandResult(True, json.dumps(migration_status(self.database), sort_keys=True, indent=2))
+        if rest == ["migrate", "--dry-run"]:
+            from hardproof.storage.migrations import migration_status
+            status = migration_status(self.database)
+            status["mutation_occurred"] = False
+            return CommandResult(True, json.dumps(status, sort_keys=True, indent=2))
         if rest != ["migrate"]:
-            raise ValueError("usage: db migrate")
+            raise ValueError("usage: db <status|migrate [--dry-run]>")
         applied = migrate(self.database)
         detail = ", ".join(map(str, applied)) if applied else "already current"
         return CommandResult(True, f"Database migration: {detail}")

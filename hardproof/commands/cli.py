@@ -36,8 +36,11 @@ def _configure(parser: argparse.ArgumentParser) -> None:
     config = sub.add_parser("config").add_subparsers(dest="config_command", required=True)
     config.add_parser("init")
     config.add_parser("validate")
+    config.add_parser("explain")
     db = sub.add_parser("db").add_subparsers(dest="db_command", required=True)
-    db.add_parser("migrate")
+    migrate = db.add_parser("migrate")
+    migrate.add_argument("--dry-run", action="store_true")
+    db.add_parser("status")
     policy = sub.add_parser("policy")
     policy.add_argument("policy_args", nargs=argparse.REMAINDER)
     sub.add_parser("complete")
@@ -68,7 +71,7 @@ def _to_argv(args: argparse.Namespace) -> list[str]:
     if command == "config":
         return [command, args.config_command]
     if command == "db":
-        return [command, args.db_command]
+        return [command, args.db_command, *(["--dry-run"] if getattr(args, "dry_run", False) else [])]
     if command == "policy":
         return [command, *args.policy_args]
     return [command]

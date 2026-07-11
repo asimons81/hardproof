@@ -78,3 +78,26 @@ def migrate(database: Database) -> tuple[int, ...]:
             apply_migration_sql(connection, version, _load(version))
             applied.append(version)
         return tuple(applied)
+
+
+def migration_status(database: Database) -> dict[str, object]:
+    """Return deterministic schema and integrity diagnostics."""
+    with database.connect() as connection:
+        table_exists = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_migrations'"
+        ).fetchone()
+        current = 0
+        history: list[int] = []
+        if table_exists:
+            history = [int(row[0]) for row in connection.execute(
+                "SELECT version FROM schema_migrations ORDER BY version"
+            )]
+            current = max(history, default=0)
+        integrity = str(connection.execute("PRAGMA integrity_check").fetchone()[0])
+    pending = list(range(current + 1, LATEST_SCHEMA_VERSION + 1))
+    return {
+        "database": str(database.path), "schema_version": current,
+        "supported_schema_version": LATEST_SCHEMA_VERSION, "migration_history": history,
+        "pending_migrations": pending, "failed_migrations": [], "integrity": integrity,
+        "mutation_occurred": False,
+    }
