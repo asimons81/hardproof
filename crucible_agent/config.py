@@ -44,6 +44,7 @@ class CrucibleConfig:
     terminal_blocked_patterns: tuple[str, ...]
     output_redaction_patterns: tuple[str, ...]
     maximum_stored_output_size: int
+    mutating_tools: tuple[str, ...]
 
 
 DEFAULTS: dict[str, Any] = {
@@ -60,6 +61,7 @@ DEFAULTS: dict[str, Any] = {
         r"(?i)(api[_-]?key|token|password|authorization|cookie)\s*[:=]\s*\S+"
     ],
     "maximum_stored_output_size": 1_048_576,
+    "mutating_tools": ["write_file", "patch", "edit_file", "execute_code", "terminal"],
 }
 
 ALLOWED_KEYS = frozenset(DEFAULTS)
@@ -146,4 +148,5 @@ def load_config(path: str | Path) -> CrucibleConfig:
             "output_redaction_patterns", values["output_redaction_patterns"]
         ),
         maximum_stored_output_size=maximum,
+        mutating_tools=_string_tuple("mutating_tools", values["mutating_tools"]),
     )

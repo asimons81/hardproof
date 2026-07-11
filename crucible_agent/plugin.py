@@ -13,6 +13,7 @@ from crucible_agent.commands.slash import register_slash
 from crucible_agent.compat import require_compatible
 from crucible_agent.hooks.context import ContextHook, register_context_hooks
 from crucible_agent.hooks.sessions import SessionHooks
+from crucible_agent.hooks.tool_policy import ToolPolicyHook, register_tool_policy_hooks
 from crucible_agent.services.sessions import SessionService
 from crucible_agent.tools.handlers import HandlerDependencies, register_tools
 
@@ -97,3 +98,13 @@ def register(ctx: Any) -> None:
         return context_hook, SessionHooks(sessions, context_hook)
 
     register_context_hooks(ctx, context_bundle)
+
+    def policy_hook() -> ToolPolicyHook:
+        command_service = CommandService(CommandContext(
+            Path.cwd(), actor="model", source="hook", hermes_context=ctx
+        ))
+        return ToolPolicyHook(
+            SessionService(command_service.repository, command_service.paths), command_service
+        )
+
+    register_tool_policy_hooks(ctx, policy_hook)
