@@ -5,7 +5,7 @@
 [![CI](https://github.com/asimons81/hardproof/actions/workflows/ci.yml/badge.svg)](https://github.com/asimons81/hardproof/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-> **Alpha software.** v0.1.1 is the current signed public alpha on PyPI. v0.2.0 Gatehouse is an unpublished release candidate. Commands, schemas, and contracts may change before v1.0.0.
+> **Alpha software.** v0.2.0 Gatehouse is the current signed public alpha on PyPI. v0.3.0 Workcells development has not begun. Commands, schemas, and contracts may change before v1.0.0.
 
 Hardproof gives coding agents a persistent, risk-aware engineering process that turns ambiguous software requests into reviewed, verified results while preserving the evidence behind every completion claim.
 
@@ -15,13 +15,13 @@ Hardproof gives coding agents a persistent, risk-aware engineering process that 
 
 | Release | Version | Status |
 |---------|---------|--------|
-| Public alpha | v0.1.1 Core Heat | Released on GitHub and PyPI |
-| Release candidate | v0.2.0 Gatehouse | Complete locally; independent audit pending |
+| Latest public alpha | v0.2.0 Gatehouse | Released on GitHub and PyPI |
+| Previous public alpha | v0.1.1 Core Heat | Released on GitHub and PyPI |
 | Future | v0.3.0 Workcells | Not started |
 
 ## Install and enable
 
-From PyPI (current public v0.1.1):
+From PyPI (current public v0.2.0):
 
 ```bash
 pip install hardproof
@@ -110,7 +110,7 @@ Gatehouse adds strict project allow/deny/approval rules, ordered policy explanat
 scoped waivers, advisory risk suggestions, bounded monotonic stage graphs, configuration and
 migration diagnostics, and versioned Python/Node/Rust/Go policy packs. See
 [configuration and migrations](docs/configuration-and-migrations.md) and
-[policy packs](docs/policy-packs.md). It is not yet published.
+[policy packs](docs/policy-packs.md). Published on GitHub and PyPI as v0.2.0.
 
 ## Known limitations
 
@@ -126,7 +126,7 @@ migration diagnostics, and versioned Python/Node/Rust/Go policy packs. See
 | Version | Codename | Focus |
 |---------|----------|-------|
 | v0.1.1 | Core Heat | Current public alpha: standalone plugin, durable stages, SQLite state, approvals, skills, fresh evidence, reports |
-| v0.2.0 | Gatehouse | Explainable configurable policy, scoped waivers, risk suggestions, language packs |
+| v0.2.0 | Gatehouse | Current public alpha: explainable configurable policy, scoped waivers, risk suggestions, language packs |
 | v0.3.0 | Workcells | Dependency-aware task waves, resumable subagent implementers |
 | v0.4.0 | Challenge Chamber | Independent specialized reviewers, severity, fix/re-review loops |
 | v0.5.0 | Isolation | Branches, worktrees, baseline proof, rollback, backend adapters |

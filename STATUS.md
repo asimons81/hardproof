@@ -1,7 +1,7 @@
 # Hardproof Status
 
-- Current public release: v0.1.1
-- Prepared release: v0.2.0 Gatehouse release candidate (not tagged or published)
+Latest public alpha: v0.2.0 Gatehouse
+PyPI: pip install hardproof
 - Working branch: `codex/finish-v0.2.0-gatehouse`
 - Local platform: Windows, Python 3.11, Hermes Agent 0.18.2 public APIs compatible
 - Full suite: 369 tests passing, at least 90% total coverage

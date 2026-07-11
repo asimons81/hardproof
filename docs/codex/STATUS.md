@@ -1,7 +1,7 @@
 # Hardproof Codex Status
 
 - Current release: v0.2.0
-- Current release phase: v0.2.0 Gatehouse release candidate complete; independent audit pending
+- Current release phase: v0.2.0 Gatehouse published on GitHub and PyPI
 - Last completed task: v0.2.0 Task 12 - integration, compatibility, and release gates
 - Next task: independent v0.2.0 release audit; do not begin v0.3.0
 - Test status: 369 tests pass; total and critical coverage gates, Ruff, strict mypy, build, Twine, clean installs, and migration rehearsal pass
