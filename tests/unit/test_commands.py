@@ -65,7 +65,7 @@ def test_evidence_and_export_are_deterministic_and_secret_safe(tmp_path: Path) -
     assert "No verification evidence" in service.execute(["evidence"]).text
     exported = service.execute(["export"])
     assert exported.ok
-    export_path = service.paths.run_directory(started.run_id or "") / "run-export.json"
+    export_path = service.paths.run_directory(started.run_id or "") / "completion.json"
     first = export_path.read_bytes()
     assert b"secret-value" not in first
     service.execute(["export"])

@@ -18,6 +18,7 @@ from crucible_agent.hooks.tool_policy import ToolPolicyHook, register_tool_polic
 from crucible_agent.hooks.verification import VerificationHook, register_verification_hook
 from crucible_agent.services.evidence import EvidenceService, HermesCommandRunner
 from crucible_agent.services.sessions import SessionService
+from crucible_agent.services.reports import ReportService
 from crucible_agent.tools.handlers import HandlerDependencies, register_tools
 
 
@@ -97,9 +98,22 @@ def register(ctx: Any) -> None:
 
         def report(args: dict[str, Any]) -> dict[str, Any]:
             action = str(args.get("action", "status"))
-            command = "export" if action in {"export", "completion"} else action
-            argv = [command] + ([str(args["path"])] if args.get("path") and command == "export" else [])
-            result = command_service.execute(argv)
+            if action in {"export", "completion"}:
+                run_id = command_service.active_run_id()
+                paths = ReportService(
+                    command_service.repository,
+                    command_service.context.project_root,
+                    command_service.paths.run_directory(run_id),
+                ).export(
+                    run_id,
+                    destination=args.get("path"),
+                    format=str(args.get("format") or "both"),
+                )
+                return {
+                    "ok": True, "action": action, "run_id": run_id,
+                    "paths": {key: str(path) for key, path in paths.items()},
+                }
+            result = command_service.execute([action])
             return {"ok": result.ok, "action": action, "message": result.text, "run_id": result.run_id}
 
         def spill(content: str) -> str:

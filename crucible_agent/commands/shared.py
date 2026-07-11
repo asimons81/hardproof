@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import subprocess
@@ -22,6 +21,7 @@ from crucible_agent.policy.stage_rules import TransitionFacts
 from crucible_agent.services.approvals import ApprovalService
 from crucible_agent.services.evidence import evidence_with_freshness
 from crucible_agent.services.runs import RunService
+from crucible_agent.services.reports import ReportService
 from crucible_agent.storage.database import Database, DatabaseCorruptionError
 from crucible_agent.storage.migrations import MigrationError, migrate
 from crucible_agent.storage.repository import RunRepository
@@ -254,39 +254,16 @@ class CommandService:
         ]
         return CommandResult(True, "\n".join(lines), run_id)
 
-    def _export_payload(self, run: Run) -> dict[str, Any]:
-        return {
-            "schema_version": 1,
-            "run": {
-                "id": run.id, "request": _redact(run.request), "profile": run.profile.value,
-                "stage": run.stage.value, "status": run.status.value,
-                "created_at": run.created_at, "updated_at": run.updated_at,
-            },
-            "artifacts": [
-                {"kind": item.kind.value, "path": item.path, "sha256": item.sha256}
-                for item in self.repository.list_artifacts(run.id)
-            ],
-            "tasks": [
-                {"key": item.task_key, "title": _redact(item.title), "status": item.status.value}
-                for item in self.repository.list_tasks(run.id)
-            ],
-            "evidence": [
-                {"check": item.check_name, "status": item.status.value, "output": item.output_path}
-                for item in self.repository.list_evidence(run.id)
-            ],
-        }
-
     def _export(self, rest: list[str]) -> CommandResult:
         if len(rest) > 1:
             raise ValueError("usage: export [path]")
         run = self.repository.get_run(self.active_run_id())
-        destination = Path(rest[0]).expanduser().resolve() if rest else self.paths.run_directory(run.id) / "run-export.json"
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        content = json.dumps(self._export_payload(run), indent=2, sort_keys=True) + "\n"
-        temporary = destination.with_name(f".{destination.name}.{uuid4().hex}.tmp")
-        temporary.write_text(content, encoding="utf-8")
-        os.replace(temporary, destination)
-        return CommandResult(True, f"Export written to {destination}.", run.id)
+        destination = Path(rest[0]).expanduser().resolve() if rest else None
+        paths = ReportService(
+            self.repository, self.context.project_root, self.paths.run_directory(run.id)
+        ).export(run.id, destination=destination, format="both")
+        rendered = ", ".join(str(path) for path in paths.values())
+        return CommandResult(True, f"Export written to {rendered}.", run.id)
 
     def _doctor(self, rest: list[str]) -> CommandResult:
         self._expect_no_args("doctor", rest)

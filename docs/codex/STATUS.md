@@ -2,11 +2,11 @@
 
 - Current release: v0.1.0
 - Current release phase: implementation
-- Last completed task: Task 13 - require fresh workspace-bound verification evidence
-- Next task: Task 14 - generate deterministic completion reports and exports
-- Test status: full suite passes (188); Task 13 focus passes (15); Ruff/mypy/build/twine gates pass
+- Last completed task: Task 14 - export deterministic completion reports
+- Next task: Task 15 - build integration and end-to-end tests
+- Test status: full suite passes (192); Task 14 focus passes (5); Ruff and strict mypy clean
 - Current branch: codex/v0.1.0
 - Current version: 0.1.0
 - Unresolved blockers: none
 - External publication blockers: brand clearance; GitHub and PyPI credentials not yet assessed
-- Last updated: 2026-07-11T10:18:00-05:00
+- Last updated: 2026-07-11T11:02:00-05:00
