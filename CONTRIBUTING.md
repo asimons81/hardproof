@@ -35,3 +35,15 @@ Use `git commit -s`. The sign-off certifies that you have the right to submit th
 ## Pull requests
 
 Describe behavior, risk, tests, migrations, documentation, and compatibility impact. Link the issue or ADR. Do not include credentials, private transcripts, generated caches, local databases, or unredacted verification output.
+
+## Release tags
+
+Release tags are cryptographically signed using SSH (Ed25519). Only approved signers listed in `.github/release-signers` may create release tags. See `docs/security/release-signing.md` for the full policy.
+
+Verify a release tag locally:
+
+```bash
+git config gpg.format ssh
+git config gpg.ssh.allowedSignersFile .github/release-signers
+git tag -v v0.1.1
+```

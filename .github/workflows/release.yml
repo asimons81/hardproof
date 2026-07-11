@@ -23,6 +23,10 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: python -m pip install -e ".[dev]"
+      - name: Configure SSH signing verification
+        run: |
+          git config gpg.format ssh
+          git config gpg.ssh.allowedSignersFile "$GITHUB_WORKSPACE/.github/release-signers"
       - name: Verify signed tag
         run: git tag -v "${GITHUB_REF_NAME}"
       - name: Verify commit is on main
