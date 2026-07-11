@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from crucible_agent.domain.enums import (
+from hardproof.domain.enums import (
     ApprovalGate,
     ArtifactKind,
     EvidenceStatus,

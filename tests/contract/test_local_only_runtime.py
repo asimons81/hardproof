@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PACKAGE = ROOT / "crucible_agent"
+PACKAGE = ROOT / "hardproof"
 NETWORK_MODULES = frozenset(
     {"aiohttp", "http", "httpx", "requests", "socket", "urllib", "websockets"}
 )

@@ -1,4 +1,4 @@
-from crucible_agent.tools.handlers import HandlerDependencies, register_tools
+from hardproof.tools.handlers import HandlerDependencies, register_tools
 
 
 class FakeContext:
@@ -9,12 +9,12 @@ class FakeContext:
         self.tools.append(kwargs)
 
 
-def test_all_six_tools_register_under_crucible_toolset() -> None:
+def test_all_six_tools_register_under_hardproof_toolset() -> None:
     context = FakeContext()
     register_tools(context, lambda: HandlerDependencies(None))  # type: ignore[arg-type]
     assert len(context.tools) == 6
     assert {item["name"] for item in context.tools} == {
-        "crucible_run", "crucible_record", "crucible_task",
-        "crucible_transition", "crucible_verify", "crucible_report",
+        "hardproof_run", "hardproof_record", "hardproof_task",
+        "hardproof_transition", "hardproof_verify", "hardproof_report",
     }
-    assert {item["toolset"] for item in context.tools} == {"crucible"}
+    assert {item["toolset"] for item in context.tools} == {"hardproof"}

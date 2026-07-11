@@ -1,15 +1,15 @@
-name: crucible
+name: hardproof
 version: 0.1.0
 description: Persistent, risk-aware engineering protocol with durable verification evidence.
-author: Crucible Agent contributors
+author: Hardproof contributors
 kind: workflow
 provides_tools:
-  - crucible_run
-  - crucible_record
-  - crucible_task
-  - crucible_transition
-  - crucible_verify
-  - crucible_report
+  - hardproof_run
+  - hardproof_record
+  - hardproof_task
+  - hardproof_transition
+  - hardproof_verify
+  - hardproof_report
 provides_hooks:
   - pre_llm_call
   - pre_tool_call

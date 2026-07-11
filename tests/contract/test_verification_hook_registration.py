@@ -1,4 +1,4 @@
-from crucible_agent.hooks.verification import register_verification_hook
+from hardproof.hooks.verification import register_verification_hook
 
 
 class Context:

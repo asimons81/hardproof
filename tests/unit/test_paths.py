@@ -2,14 +2,14 @@ from pathlib import Path
 
 import pytest
 
-from crucible_agent.paths import ProjectPaths, safe_project_relative
+from hardproof.paths import ProjectPaths, safe_project_relative
 
 
 def test_project_paths_are_local_and_deterministic(tmp_path: Path) -> None:
     paths = ProjectPaths(tmp_path)
-    assert paths.config == tmp_path / ".crucible" / "config.yaml"
-    assert paths.database == tmp_path / ".crucible" / "state" / "crucible.db"
-    assert paths.run_directory("run-123") == tmp_path / ".crucible" / "runs" / "run-123"
+    assert paths.config == tmp_path / ".hardproof" / "config.yaml"
+    assert paths.database == tmp_path / ".hardproof" / "state" / "hardproof.db"
+    assert paths.run_directory("run-123") == tmp_path / ".hardproof" / "runs" / "run-123"
 
 
 @pytest.mark.parametrize(

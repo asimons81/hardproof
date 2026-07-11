@@ -4,9 +4,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from crucible_agent.domain.enums import EvidenceStatus, RunProfile, RunStage, RunStatus
-from crucible_agent.domain.models import Evidence, Run, TransitionResult, new_id
-from crucible_agent.domain.snapshots import WorkspaceSnapshot
+from hardproof.domain.enums import EvidenceStatus, RunProfile, RunStage, RunStatus
+from hardproof.domain.models import Evidence, Run, TransitionResult, new_id
+from hardproof.domain.snapshots import WorkspaceSnapshot
 
 
 def test_run_serialization_round_trip() -> None:

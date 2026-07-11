@@ -4,13 +4,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-from crucible_agent.commands.shared import CommandContext, CommandService
-from crucible_agent.domain.enums import ArtifactKind, EvidenceStatus, RunStage, TaskStatus
-from crucible_agent.plugin import register
-from crucible_agent.services.artifacts import ArtifactService
-from crucible_agent.services.evidence import CommandResult, EvidenceService
-from crucible_agent.services.reports import ReportService
-from crucible_agent.tools.handlers import HandlerDependencies, create_handlers
+from hardproof.commands.shared import CommandContext, CommandService
+from hardproof.domain.enums import ArtifactKind, EvidenceStatus, RunStage, TaskStatus
+from hardproof.plugin import register
+from hardproof.services.artifacts import ArtifactService
+from hardproof.services.evidence import CommandResult, EvidenceService
+from hardproof.services.reports import ReportService
+from hardproof.tools.handlers import HandlerDependencies, create_handlers
 
 
 class FakePluginContext:
@@ -52,7 +52,7 @@ def git_project(root: Path) -> None:
     subprocess.run(["git", "init", "-q", str(root)], check=True)
     subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.com"], check=True)
     subprocess.run(["git", "-C", str(root), "config", "user.name", "Test"], check=True)
-    (root / ".gitignore").write_text(".crucible/\n__pycache__/\n", encoding="utf-8")
+    (root / ".gitignore").write_text(".hardproof/\n__pycache__/\n", encoding="utf-8")
     (root / "tiny.py").write_text("def value():\n    return 1\n", encoding="utf-8")
     (root / "test_tiny.py").write_text("from tiny import value\n\ndef test_value():\n    assert value() == 1\n", encoding="utf-8")
     subprocess.run(["git", "-C", str(root), "add", "."], check=True)
@@ -65,14 +65,14 @@ def test_full_standard_workflow_survives_restart_and_reproves_after_edit(tmp_pat
     register(plugin)
     assert len(plugin.tools) == 6
     assert len(plugin.skills) == 9
-    assert "crucible" in plugin.commands and "crucible" in plugin.cli_commands
+    assert "hardproof" in plugin.commands and "hardproof" in plugin.cli_commands
 
     commands = CommandService(CommandContext(
         tmp_path, actor="human", source="cli", session_id="session-e2e"
     ))
     handlers = create_handlers(HandlerDependencies(commands))
 
-    started = handlers["crucible_run"]({
+    started = handlers["hardproof_run"]({
         "action": "start", "profile": "standard", "request": "Change value to two",
     })
     assert '"ok":true' in started
@@ -103,7 +103,7 @@ def test_full_standard_workflow_survives_restart_and_reproves_after_edit(tmp_pat
         run_id, RunStage.IMPLEMENT, commands.transition_facts(run_id), reason="plan approved"
     )
 
-    task = handlers["crucible_task"]({
+    task = handlers["hardproof_task"]({
         "action": "create", "key": "T1", "title": "Change value",
         "description": "Return two", "risk": "low", "acceptance": ["test passes"],
         "files": ["tiny.py", "test_tiny.py"],
@@ -111,7 +111,7 @@ def test_full_standard_workflow_survives_restart_and_reproves_after_edit(tmp_pat
     assert '"ok":true' in task
     (tmp_path / "tiny.py").write_text("def value():\n    return 2\n", encoding="utf-8")
     (tmp_path / "test_tiny.py").write_text("from tiny import value\n\ndef test_value():\n    assert value() == 2\n", encoding="utf-8")
-    handlers["crucible_task"]({
+    handlers["hardproof_task"]({
         "action": "update", "key": "T1", "status": TaskStatus.COMPLETED.value,
         "acceptance_notes": "focused test passes",
     })

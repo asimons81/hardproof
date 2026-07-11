@@ -3,7 +3,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from crucible_agent.domain.enums import (
+from hardproof.domain.enums import (
     ApprovalGate,
     ArtifactKind,
     EvidenceStatus,
@@ -12,7 +12,7 @@ from crucible_agent.domain.enums import (
     RunStage,
     TaskStatus,
 )
-from crucible_agent.domain.models import (
+from hardproof.domain.models import (
     Approval,
     Artifact,
     Decision,
@@ -22,9 +22,9 @@ from crucible_agent.domain.models import (
     Task,
     VerificationCheck,
 )
-from crucible_agent.storage.database import Database
-from crucible_agent.storage.migrations import migrate
-from crucible_agent.storage.repository import RunRepository
+from hardproof.storage.database import Database
+from hardproof.storage.migrations import migrate
+from hardproof.storage.repository import RunRepository
 
 
 def repository_at(path: Path) -> RunRepository:
@@ -34,7 +34,7 @@ def repository_at(path: Path) -> RunRepository:
 
 
 def test_create_and_reopen_run_with_windows_project_path(tmp_path: Path) -> None:
-    db_path = tmp_path / "crucible.db"
+    db_path = tmp_path / "hardproof.db"
     repository = repository_at(db_path)
     run = Run.create(r"C:\Users\person\source\project", "Implement feature", RunProfile.STANDARD)
     repository.create_run(run)
@@ -43,7 +43,7 @@ def test_create_and_reopen_run_with_windows_project_path(tmp_path: Path) -> None
 
 
 def test_append_only_events_are_concurrency_safe(tmp_path: Path) -> None:
-    repository = repository_at(tmp_path / "crucible.db")
+    repository = repository_at(tmp_path / "hardproof.db")
     run = Run.create(str(tmp_path), "Concurrent ledger", RunProfile.QUICK)
     repository.create_run(run)
 
@@ -57,7 +57,7 @@ def test_append_only_events_are_concurrency_safe(tmp_path: Path) -> None:
 
 
 def test_stage_transition_and_event_are_atomic(tmp_path: Path) -> None:
-    repository = repository_at(tmp_path / "crucible.db")
+    repository = repository_at(tmp_path / "hardproof.db")
     run = Run.create(str(tmp_path), "Transition", RunProfile.QUICK)
     repository.create_run(run)
     updated = repository.transition_run(run.id, RunStage.DISCOVERY, reason="intake recorded")
@@ -68,7 +68,7 @@ def test_stage_transition_and_event_are_atomic(tmp_path: Path) -> None:
 
 
 def test_typed_ledgers_round_trip(tmp_path: Path) -> None:
-    repository = repository_at(tmp_path / "crucible.db")
+    repository = repository_at(tmp_path / "hardproof.db")
     run = Run.create(str(tmp_path), "Typed ledgers", RunProfile.STANDARD)
     repository.create_run(run)
     timestamp = run.created_at

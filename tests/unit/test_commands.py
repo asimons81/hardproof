@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from crucible_agent.commands.cli import build_parser, run_cli
-from crucible_agent.commands.shared import CommandContext, CommandService
-from crucible_agent.commands.slash import make_slash_handler
+from hardproof.commands.cli import build_parser, run_cli
+from hardproof.commands.shared import CommandContext, CommandService
+from hardproof.commands.slash import make_slash_handler
 
 
 def context(tmp_path: Path, *, source: str = "cli") -> CommandContext:
@@ -26,7 +26,7 @@ def test_start_status_runs_and_show(tmp_path: Path) -> None:
     assert started.run_id in service.execute(["runs"]).text
     shown = service.execute(["show", started.run_id])
     assert "Build safe feature" in shown.text
-    assert ".crucible" in str(tmp_path / ".crucible")
+    assert ".hardproof" in str(tmp_path / ".hardproof")
 
 
 def test_human_approval_and_waiver_sources_are_attributable(tmp_path: Path) -> None:
@@ -101,5 +101,5 @@ def test_cli_parser_accepts_every_documented_subcommand(argv: list[str]) -> None
 def test_malformed_slash_arguments_return_concise_error(tmp_path: Path, raw: str) -> None:
     handler = make_slash_handler(lambda: CommandService(context(tmp_path, source="slash")))
     output = asyncio.run(handler(raw))
-    assert output.startswith("Crucible error:")
+    assert output.startswith("Hardproof error:")
     assert len(output) < 500

@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from crucible_agent.storage.database import Database, DatabaseCorruptionError
-from crucible_agent.storage.migrations import MigrationError, apply_migration_sql, migrate
+from hardproof.storage.database import Database, DatabaseCorruptionError
+from hardproof.storage.migrations import MigrationError, apply_migration_sql, migrate
 
 
 def test_database_enables_required_pragmas(tmp_path: Path) -> None:
-    database = Database(tmp_path / "state" / "crucible.db")
+    database = Database(tmp_path / "state" / "hardproof.db")
     with database.connect() as connection:
         assert connection.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         assert connection.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
@@ -18,7 +18,7 @@ def test_database_enables_required_pragmas(tmp_path: Path) -> None:
 
 
 def test_migration_is_idempotent_and_reopenable(tmp_path: Path) -> None:
-    database = Database(tmp_path / "crucible.db")
+    database = Database(tmp_path / "hardproof.db")
     assert migrate(database) == (1,)
     assert migrate(database) == ()
     with database.connect() as connection:
@@ -28,7 +28,7 @@ def test_migration_is_idempotent_and_reopenable(tmp_path: Path) -> None:
 
 
 def test_interrupted_migration_rolls_back(tmp_path: Path) -> None:
-    database = Database(tmp_path / "crucible.db")
+    database = Database(tmp_path / "hardproof.db")
     with database.connect() as connection:
         with pytest.raises(sqlite3.OperationalError):
             apply_migration_sql(
@@ -42,7 +42,7 @@ def test_interrupted_migration_rolls_back(tmp_path: Path) -> None:
 
 
 def test_incomplete_migration_is_rejected_before_execution(tmp_path: Path) -> None:
-    database = Database(tmp_path / "crucible.db")
+    database = Database(tmp_path / "hardproof.db")
     with database.connect() as connection, pytest.raises(
         MigrationError, match="incomplete SQL statement"
     ):
@@ -54,7 +54,7 @@ def test_incomplete_migration_is_rejected_before_execution(tmp_path: Path) -> No
 
 
 def test_unknown_newer_schema_refuses_write(tmp_path: Path) -> None:
-    database = Database(tmp_path / "crucible.db")
+    database = Database(tmp_path / "hardproof.db")
     migrate(database)
     with database.connect() as connection, connection:
         connection.execute(
@@ -65,7 +65,7 @@ def test_unknown_newer_schema_refuses_write(tmp_path: Path) -> None:
 
 
 def test_foreign_keys_are_enforced(tmp_path: Path) -> None:
-    database = Database(tmp_path / "crucible.db")
+    database = Database(tmp_path / "hardproof.db")
     migrate(database)
     with database.connect() as connection, pytest.raises(sqlite3.IntegrityError), connection:
         connection.execute(
@@ -75,7 +75,7 @@ def test_foreign_keys_are_enforced(tmp_path: Path) -> None:
 
 
 def test_corrupt_database_is_never_overwritten(tmp_path: Path) -> None:
-    path = tmp_path / "crucible.db"
+    path = tmp_path / "hardproof.db"
     original = b"not a sqlite database"
     path.write_bytes(original)
     with pytest.raises(DatabaseCorruptionError, match="preserved"):

@@ -1,4 +1,4 @@
-from crucible_agent.hooks.context import register_context_hooks
+from hardproof.hooks.context import register_context_hooks
 
 
 class FakeContext:

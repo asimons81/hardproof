@@ -1,5 +1,5 @@
-from crucible_agent.domain.enums import ApprovalGate, RunProfile
-from crucible_agent.policy.profiles import policy_for
+from hardproof.domain.enums import ApprovalGate, RunProfile
+from hardproof.policy.profiles import policy_for
 
 
 def test_standard_is_single_check_default_with_human_design_and_plan_gates() -> None:

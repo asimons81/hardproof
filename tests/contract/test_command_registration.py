@@ -1,6 +1,6 @@
-from crucible_agent.commands.cli import register_cli
-from crucible_agent.commands.slash import register_slash
-from crucible_agent.plugin import register
+from hardproof.commands.cli import register_cli
+from hardproof.commands.slash import register_slash
+from hardproof.plugin import register
 
 
 class FakeContext:
@@ -24,12 +24,12 @@ class FakeContext:
         return "default"
 
 
-def test_registers_one_crucible_slash_and_cli_command() -> None:
+def test_registers_one_hardproof_slash_and_cli_command() -> None:
     context = FakeContext()
     register_slash(context, lambda: None)  # type: ignore[arg-type]
     register_cli(context, lambda: None)  # type: ignore[arg-type]
-    assert context.slash is not None and context.slash[0][0] == "crucible"
-    assert context.cli is not None and context.cli[0][0] == "crucible"
+    assert context.slash is not None and context.slash[0][0] == "hardproof"
+    assert context.cli is not None and context.cli[0][0] == "hardproof"
 
 
 def test_plugin_entrypoint_wires_both_human_command_surfaces() -> None:

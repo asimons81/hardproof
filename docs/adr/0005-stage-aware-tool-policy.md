@@ -9,9 +9,9 @@ Standard and Critical runs must preserve intent-before-implementation and preven
 
 ## Decision
 
-Crucible separates deterministic classification in `policy/tool_rules.py` from the Hermes adapter in `hooks/tool_policy.py`. Known mutating tool names are feature-configurable. Artifact-directory writes remain allowed in every active stage; project source writes are allowed only during IMPLEMENT.
+Hardproof separates deterministic classification in `policy/tool_rules.py` from the Hermes adapter in `hooks/tool_policy.py`. Known mutating tool names are feature-configurable. Artifact-directory writes remain allowed in every active stage; project source writes are allowed only during IMPLEMENT.
 
-Immutable force-push rules block in every profile. Recognized destructive commands block or use Hermes's public human-approval escalation, with stable `crucible:` rule keys. Deployment is unavailable before DELIVER. Standard and Critical mutations fail closed when active state cannot load.
+Immutable force-push rules block in every profile. Recognized destructive commands block or use Hermes's public human-approval escalation, with stable `hardproof:` rule keys. Deployment is unavailable before DELIVER. Standard and Critical mutations fail closed when active state cannot load.
 
 Audit events store rule identifiers and hashed argument summaries, never raw arguments or tool output.
 

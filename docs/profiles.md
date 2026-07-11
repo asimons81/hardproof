@@ -1,6 +1,6 @@
-# Crucible Profiles
+# Hardproof Profiles
 
-Crucible applies process in proportion to risk. Profiles change required artifacts, approvals, review, and evidence counts; none can waive fresh successful verification.
+Hardproof applies process in proportion to risk. Profiles change required artifacts, approvals, review, and evidence counts; none can waive fresh successful verification.
 
 ## Quick
 
@@ -14,4 +14,4 @@ Standard is the default. It requires discovery, design and human design approval
 
 Critical covers security, secrets, migrations, destructive actions, concurrency, billing, deployment, and other high-impact work. It includes every Standard gate plus at least two verification checks, explicit rollback and unresolved-risk material, approval-gated high-risk actions, human completion approval, and fail-closed mutation when policy state cannot be loaded.
 
-Crucible policy coordinates engineering work; it is not a security sandbox and does not replace operating-system controls, isolation, or human review.
+Hardproof policy coordinates engineering work; it is not a security sandbox and does not replace operating-system controls, isolation, or human review.

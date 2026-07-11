@@ -22,7 +22,7 @@ def test_inspiration_declares_clean_room_boundary() -> None:
 
 
 def test_upstream_namespace_absent_from_package_and_skill_paths() -> None:
-    package = ROOT / "crucible_agent"
+    package = ROOT / "hardproof"
     if not package.exists():
         return
     for path in package.rglob("*"):

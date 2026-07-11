@@ -7,12 +7,12 @@ from typing import Callable
 
 import pytest
 
-from crucible_agent.domain.enums import EvidenceStatus, RunProfile
-from crucible_agent.domain.models import Run, VerificationCheck
-from crucible_agent.services.evidence import CommandResult, EvidenceService, HermesCommandRunner
-from crucible_agent.storage.database import Database
-from crucible_agent.storage.migrations import migrate
-from crucible_agent.storage.repository import RunRepository
+from hardproof.domain.enums import EvidenceStatus, RunProfile
+from hardproof.domain.models import Run, VerificationCheck
+from hardproof.services.evidence import CommandResult, EvidenceService, HermesCommandRunner
+from hardproof.storage.database import Database
+from hardproof.storage.migrations import migrate
+from hardproof.storage.repository import RunRepository
 
 
 def git_repo(path: Path) -> None:
@@ -23,7 +23,7 @@ def git_repo(path: Path) -> None:
     subprocess.run(["git", "-C", str(path), "add", "code.py"], check=True)
     subprocess.run(["git", "-C", str(path), "commit", "-qm", "initial"], check=True)
     exclude = path / ".git" / "info" / "exclude"
-    exclude.write_text(exclude.read_text(encoding="utf-8") + "\n.crucible/\n", encoding="utf-8")
+    exclude.write_text(exclude.read_text(encoding="utf-8") + "\n.hardproof/\n", encoding="utf-8")
 
 
 @dataclass
@@ -47,7 +47,7 @@ def service(
     maximum: int = 1_048_576,
 ) -> tuple[EvidenceService, RunRepository, Run]:
     git_repo(tmp_path)
-    database = Database(tmp_path / ".crucible/state/crucible.db")
+    database = Database(tmp_path / ".hardproof/state/hardproof.db")
     migrate(database)
     repository = RunRepository(database)
     run = Run.create(str(tmp_path), "verify", profile)
@@ -57,7 +57,7 @@ def service(
             f"check-{index}", run.id, f"check-{index}", f"command-{index}", True, 60
         ))
     evidence = EvidenceService(
-        repository, tmp_path, tmp_path / ".crucible/runs" / run.id,
+        repository, tmp_path, tmp_path / ".hardproof/runs" / run.id,
         FakeRunner(result, callback), maximum_stored_output_size=maximum,
     )
     return evidence, repository, run

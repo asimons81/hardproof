@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from hypothesis import given, strategies as st
 
-from crucible_agent.domain.enums import RunProfile
-from crucible_agent.domain.models import Run
+from hardproof.domain.enums import RunProfile
+from hardproof.domain.models import Run
 
 
 @given(

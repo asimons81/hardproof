@@ -1,4 +1,4 @@
-from crucible_agent.hooks.tool_policy import register_tool_policy_hooks
+from hardproof.hooks.tool_policy import register_tool_policy_hooks
 
 
 class FakeContext:

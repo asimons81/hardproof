@@ -1,6 +1,6 @@
 # Roadmap
 
-Crucible ships by evidence gates rather than dates.
+Hardproof ships by evidence gates rather than dates.
 
 - v0.1.0 Core Heat establishes the standalone plugin, durable stages and profiles, local SQLite state, approvals, skills, context, mutation policy, fresh evidence, reports, and open-source foundation.
 - v0.2.0 Gatehouse adds explainable configurable policy, scoped waivers, risk suggestions, migration diagnostics, and language policy packs.

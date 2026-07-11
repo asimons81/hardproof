@@ -1,8 +1,8 @@
-# Crucible: From Core Heat to Proven
+# Hardproof: From Core Heat to Proven
 
-Build Crucible as a production-grade, contributor-ready, open-source engineering protocol for Hermes Agent through the gated release train v0.1.0 to v1.0.0.
+Build Hardproof as a production-grade, contributor-ready, open-source engineering protocol for Hermes Agent through the gated release train v0.1.0 to v1.0.0.
 
-The binding source is `crucible_codex_plan_and_roadmap.md`. Each release must satisfy its specification, tests, documentation, migration, security, packaging, compatibility, and evidence gates before the next release begins.
+The binding source is `hardproof_codex_plan_and_roadmap.md`. Each release must satisfy its specification, tests, documentation, migration, security, packaging, compatibility, and evidence gates before the next release begins.
 
 ## Operating contract
 
@@ -23,4 +23,4 @@ The binding source is `crucible_codex_plan_and_roadmap.md`. Each release must sa
 
 All ten releases have passed their gates; migrations from every prior public version pass; supported-platform, package, security, compatibility, and end-to-end evidence is current; no placeholders or secrets remain; `FINAL_AUDIT.md` maps every promise to inspectable code, tests, documentation, release evidence, and Git history; and `STATUS.md` reads `GOAL COMPLETE`.
 
-The full originating goal contract is preserved at `docs/codex/source/CRUCIBLE_CODEX_GOAL.md` once the repository bootstrap task establishes the documentation import.
+The full originating goal contract is preserved at `docs/codex/source/HARDPROOF_CODEX_GOAL.md` once the repository bootstrap task establishes the documentation import.

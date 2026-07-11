@@ -3,13 +3,13 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from crucible_agent.commands.shared import CommandContext, CommandService
-from crucible_agent.domain.enums import RunProfile, RunStage
-from crucible_agent.domain.models import Run, utc_now
-from crucible_agent.hooks.context import ContextHook
-from crucible_agent.hooks.sessions import SessionHooks
-from crucible_agent.services.sessions import SessionService
-from crucible_agent.storage.repository import RunRepository
+from hardproof.commands.shared import CommandContext, CommandService
+from hardproof.domain.enums import RunProfile, RunStage
+from hardproof.domain.models import Run, utc_now
+from hardproof.hooks.context import ContextHook
+from hardproof.hooks.sessions import SessionHooks
+from hardproof.services.sessions import SessionService
+from hardproof.storage.repository import RunRepository
 
 
 def setup(tmp_path: Path) -> tuple[RunRepository, CommandService, SessionService]:
@@ -25,7 +25,7 @@ def test_first_turn_falls_back_to_active_pointer_and_persists_binding(tmp_path: 
     hook = ContextHook(sessions, commands)
     result = hook(session_id="session-a", is_first_turn=True)
     assert result is not None
-    assert "CRUCIBLE RUN ACTIVE" in result["context"]
+    assert "HARDPROOF RUN ACTIVE" in result["context"]
     assert started.run_id in result["context"]
     assert repository.get_session_binding("session-a") is not None
 
@@ -93,7 +93,7 @@ def test_context_is_deterministic_bounded_and_contains_no_artifact_body(tmp_path
     second = hook(session_id="session-a")
     assert first == second
     assert first is not None and len(first["context"]) <= 2_500
-    assert "Required skill: skill_view(\"crucible:orchestrate\")" in first["context"]
+    assert "Required skill: skill_view(\"hardproof:orchestrate\")" in first["context"]
 
 
 def test_finalize_and_reset_clear_cache_but_preserve_database(tmp_path: Path) -> None:

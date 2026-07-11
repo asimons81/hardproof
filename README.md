@@ -1,48 +1,48 @@
-# Crucible Agent
+# Hardproof
 
-[![CI](https://github.com/asimons81/crucible-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/asimons81/crucible-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/asimons81/hardproof/actions/workflows/ci.yml/badge.svg)](https://github.com/asimons81/hardproof/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 > Alpha software: v0.1.0 is under active development. The command, schema, and extension contracts may change before v1.0.0 through documented migrations and release notes.
 
-Crucible is a local-first engineering protocol for Hermes Agent. It turns rough software requests into durable discovery, approved design and planning, tracked implementation, independent review, and fresh verification evidence tied to the final Git workspace state.
+Hardproof is a local-first engineering protocol for Hermes Agent. It turns rough software requests into durable discovery, approved design and planning, tracked implementation, independent review, and fresh verification evidence tied to the final Git workspace state.
 
-> **Working-name notice:** “Crucible” has not completed trademark or marketplace clearance. The descriptive distribution identity is `crucible-agent`; this project is independent and is not affiliated with Atlassian.
+> **Working-name notice:** “Hardproof” has not completed trademark or marketplace clearance. The descriptive distribution identity is `hardproof`; this project is independent and is not affiliated with Atlassian.
 
 ## Install and enable
 
 From GitHub:
 
 ```bash
-hermes plugins install asimons81/crucible-agent --enable
+hermes plugins install asimons81/hardproof --enable
 ```
 
 From a Python package:
 
 ```bash
-pip install crucible-agent
-hermes plugins enable crucible
+pip install hardproof
+hermes plugins enable hardproof
 ```
 
-Plugins remain opt-in under Hermes configuration. Crucible does not edit global instructions or install skills into the user's global skill directory.
+Plugins remain opt-in under Hermes configuration. Hardproof does not edit global instructions or install skills into the user's global skill directory.
 
 ## First run
 
 Start in a Git repository with at least one commit:
 
 ```text
-/crucible start standard Build API-key rotation with rollback support
-/crucible status
+/hardproof start standard Build API-key rotation with rollback support
+/hardproof status
 ```
 
 The equivalent terminal surface is:
 
 ```bash
-hermes crucible start standard "Build API-key rotation with rollback support"
-hermes crucible status
+hermes hardproof start standard "Build API-key rotation with rollback support"
+hermes hardproof status
 ```
 
-Crucible stores state under `.crucible/`, adds that directory to the repository-local Git exclude file when necessary, and injects compact stage context into bound Hermes sessions.
+Hardproof stores state under `.hardproof/`, adds that directory to the repository-local Git exclude file when necessary, and injects compact stage context into bound Hermes sessions.
 
 ## Profiles
 
@@ -54,13 +54,13 @@ No profile permits completion without fresh successful evidence.
 
 ## Architecture
 
-Crucible is a standalone Python package discovered through the `hermes_agent.plugins` entry-point group. It uses only the public Hermes registration, hook, command, skill, and dispatch APIs. Project-local SQLite stores runs, sessions, events, artifacts, approvals, decisions, tasks, configured checks, and evidence. Human-readable artifacts and redacted command output live beside the database under `.crucible/runs/<run-id>/`.
+Hardproof is a standalone Python package discovered through the `hermes_agent.plugins` entry-point group. It uses only the public Hermes registration, hook, command, skill, and dispatch APIs. Project-local SQLite stores runs, sessions, events, artifacts, approvals, decisions, tasks, configured checks, and evidence. Human-readable artifacts and redacted command output live beside the database under `.hardproof/runs/<run-id>/`.
 
 See [architecture](docs/architecture.md), [protocol profiles](docs/profiles.md), and [compatibility](docs/compatibility.md).
 
 ## Security boundary
 
-Crucible coordinates engineering process; it is not a security sandbox. Policy hooks do not replace OS permissions, protected branches, sandboxing, isolation, or human code review. Force pushes are blocked, recognized destructive actions are blocked or approval-gated, and source mutation is stage-aware. Project-local configuration and plugins execute with the user's local authority.
+Hardproof coordinates engineering process; it is not a security sandbox. Policy hooks do not replace OS permissions, protected branches, sandboxing, isolation, or human code review. Force pushes are blocked, recognized destructive actions are blocked or approval-gated, and source mutation is stage-aware. Project-local configuration and plugins execute with the user's local authority.
 
 See [SECURITY.md](SECURITY.md) and the [security model](docs/security-model.md).
 
@@ -73,7 +73,7 @@ See [SECURITY.md](SECURITY.md) and the [security model](docs/security-model.md).
 
 ## Privacy
 
-Crucible has no telemetry, analytics, account, hosted dependency, remote asset fetch, or automatic update check. Normal local operation makes no intentional network request. Verification output is redacted and size-bounded; policy events store argument keys and hashes rather than raw values.
+Hardproof has no telemetry, analytics, account, hosted dependency, remote asset fetch, or automatic update check. Normal local operation makes no intentional network request. Verification output is redacted and size-bounded; policy events store argument keys and hashes rather than raw values.
 
 ## Roadmap
 
@@ -85,7 +85,7 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md), [GOVERNANCE.md](GOVERNANCE.md), a
 
 ## Inspiration
 
-Crucible acknowledges conceptual inspiration while maintaining a strict clean-room boundary. See [INSPIRATION.md](INSPIRATION.md). Crucible is independent and is not affiliated with Atlassian.
+Hardproof acknowledges conceptual inspiration while maintaining a strict clean-room boundary. See [INSPIRATION.md](INSPIRATION.md). Hardproof is independent and is not affiliated with Atlassian.
 
 ## License
 

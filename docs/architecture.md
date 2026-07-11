@@ -1,6 +1,6 @@
 # Architecture
 
-Crucible is a standalone Hermes plugin with five layers.
+Hardproof is a standalone Hermes plugin with five layers.
 
 1. Adapters register public Hermes commands, tools, hooks, and namespaced skills.
 2. Application services manage runs, artifacts, approvals, decisions, tasks, sessions, evidence, and reports.

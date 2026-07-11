@@ -1,6 +1,6 @@
-# Contributing to Crucible
+# Contributing to Hardproof
 
-Crucible welcomes issues, documentation, tests, policy analysis, compatibility reports, and code contributions.
+Hardproof welcomes issues, documentation, tests, policy analysis, compatibility reports, and code contributions.
 
 ## Before changing code
 
@@ -14,8 +14,8 @@ Use Python 3.11 or newer. Install development dependencies with `python -m pip i
 
 ```bash
 python -m pytest
-python -m ruff check crucible_agent tests scripts
-python -m mypy crucible_agent
+python -m ruff check hardproof tests scripts
+python -m mypy hardproof
 python -m build
 python -m twine check dist/*
 ```
@@ -24,7 +24,7 @@ Add tests for both allowed and refusal paths. Never weaken a gate to make a test
 
 ## Developer Certificate of Origin
 
-Crucible uses the Developer Certificate of Origin 1.1 instead of a CLA. Sign each commit with:
+Hardproof uses the Developer Certificate of Origin 1.1 instead of a CLA. Sign each commit with:
 
 ```text
 Signed-off-by: Your Name <your.email@example.com>

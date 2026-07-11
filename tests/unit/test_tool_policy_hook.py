@@ -3,10 +3,10 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from crucible_agent.commands.shared import CommandContext, CommandService
-from crucible_agent.domain.enums import RunStage
-from crucible_agent.hooks.tool_policy import ToolPolicyHook
-from crucible_agent.services.sessions import SessionService
+from hardproof.commands.shared import CommandContext, CommandService
+from hardproof.domain.enums import RunStage
+from hardproof.hooks.tool_policy import ToolPolicyHook
+from hardproof.services.sessions import SessionService
 
 
 def setup(tmp_path: Path) -> tuple[CommandService, ToolPolicyHook]:
@@ -26,7 +26,7 @@ def test_hook_returns_public_hermes_approval_directive_and_audits_rule(tmp_path:
     assert directive == {
         "action": "approve",
         "message": "Critical destructive command requires human confirmation.",
-        "rule_key": "crucible:terminal.destructive.git_reset_hard",
+        "rule_key": "hardproof:terminal.destructive.git_reset_hard",
     }
     events = commands.repository.list_events(commands.active_run_id())
     assert events[-1].payload["rule_key"] == "terminal.destructive.git_reset_hard"

@@ -21,11 +21,11 @@ jobs:
           cache: pip
       - run: python -m pip install -e ".[dev]"
       - name: Ruff
-        run: python -m ruff check crucible_agent tests scripts
+        run: python -m ruff check hardproof tests scripts
       - name: mypy
-        run: python -m mypy crucible_agent
+        run: python -m mypy hardproof
       - name: Coverage
-        run: python -m pytest --cov=crucible_agent --cov-report=xml --cov-report=term-missing --cov-fail-under=90
+        run: python -m pytest --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=90
       - name: Critical module coverage
         run: >-
           python -m pytest
@@ -35,11 +35,11 @@ jobs:
           tests/unit/test_database.py tests/unit/test_evidence_service.py
           tests/unit/test_terminal_result_parser.py tests/unit/test_snapshots.py
           tests/unit/test_verification_hook.py
-          --cov=crucible_agent.policy.stage_rules
-          --cov=crucible_agent.policy.tool_rules
-          --cov=crucible_agent.services.approvals
-          --cov=crucible_agent.storage.migrations
-          --cov=crucible_agent.services.evidence
+          --cov=hardproof.policy.stage_rules
+          --cov=hardproof.policy.tool_rules
+          --cov=hardproof.services.approvals
+          --cov=hardproof.storage.migrations
+          --cov=hardproof.services.evidence
           --cov-report=term-missing --cov-fail-under=95
       - name: Upload coverage
         uses: codecov/codecov-action@v5
@@ -90,7 +90,7 @@ jobs:
       - name: License file check
         run: python -m pytest tests/contract/test_open_source_surface.py::test_license_is_full_apache_2_text
       - name: Clean wheel installation smoke
-        run: python scripts/smoke_install.py dist/crucible_agent-0.1.0-py3-none-any.whl
+        run: python scripts/smoke_install.py dist/hardproof-0.1.0-py3-none-any.whl
       - name: pip-audit
         run: python -m pip_audit . --strict
       - name: Build SBOM and checksums

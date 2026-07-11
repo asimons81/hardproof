@@ -1,4 +1,4 @@
-# Crucible Codex Status
+# Hardproof Codex Status
 
 - Current release: v0.1.0
 - Current release phase: Task 18 locally ready; external v0.1.0 publication gates blocked

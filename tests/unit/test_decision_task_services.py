@@ -2,17 +2,17 @@ from pathlib import Path
 
 import pytest
 
-from crucible_agent.domain.enums import RiskLevel, RunProfile, TaskStatus
-from crucible_agent.domain.models import Run
-from crucible_agent.services.decisions import DecisionService
-from crucible_agent.services.tasks import TaskService
-from crucible_agent.storage.database import Database
-from crucible_agent.storage.migrations import migrate
-from crucible_agent.storage.repository import RunRepository
+from hardproof.domain.enums import RiskLevel, RunProfile, TaskStatus
+from hardproof.domain.models import Run
+from hardproof.services.decisions import DecisionService
+from hardproof.services.tasks import TaskService
+from hardproof.storage.database import Database
+from hardproof.storage.migrations import migrate
+from hardproof.storage.repository import RunRepository
 
 
 def setup(tmp_path: Path) -> tuple[RunRepository, Run]:
-    database = Database(tmp_path / "crucible.db")
+    database = Database(tmp_path / "hardproof.db")
     migrate(database)
     repository = RunRepository(database)
     run = Run.create(str(tmp_path), "ledgers", RunProfile.STANDARD)

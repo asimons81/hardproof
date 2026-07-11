@@ -1,5 +1,5 @@
-from crucible_agent.domain.enums import RunStage
-from crucible_agent.domain.transitions import FORWARD_STAGE, possible_targets
+from hardproof.domain.enums import RunStage
+from hardproof.domain.transitions import FORWARD_STAGE, possible_targets
 
 
 def test_forward_stage_sequence_matches_protocol() -> None:

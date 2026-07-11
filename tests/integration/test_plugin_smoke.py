@@ -1,6 +1,6 @@
 import pytest
 
-from crucible_agent.compat import inspect_context
+from hardproof.compat import inspect_context
 
 
 def test_real_hermes_public_context_surface_when_installed() -> None:

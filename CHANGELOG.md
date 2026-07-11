@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Crucible Agent are documented here.
+All notable changes to Hardproof are documented here.
 
 ## [Unreleased]
 

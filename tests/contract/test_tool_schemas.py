@@ -1,11 +1,11 @@
 import jsonschema
 
-from crucible_agent.tools.schemas import TOOL_SCHEMAS
+from hardproof.tools.schemas import TOOL_SCHEMAS
 
 
 EXPECTED = {
-    "crucible_run", "crucible_record", "crucible_task",
-    "crucible_transition", "crucible_verify", "crucible_report",
+    "hardproof_run", "hardproof_record", "hardproof_task",
+    "hardproof_transition", "hardproof_verify", "hardproof_report",
 }
 
 

@@ -1,6 +1,6 @@
 # Development
 
-Crucible requires Python 3.11 or newer and PyYAML 6.x. Runtime code otherwise favors the standard library.
+Hardproof requires Python 3.11 or newer and PyYAML 6.x. Runtime code otherwise favors the standard library.
 
 Create an isolated environment, install `.[dev]`, and run the checks in `docs/testing.md`. Keep Windows path behavior native; do not assume POSIX separators, executable names, or shell semantics. Use temporary repositories for mutation and Git tests.
 
