@@ -209,6 +209,10 @@ class CommandService:
             self.repository.get_run(rest[0])
             self._set_active(rest[0])
         run = self.run_service.resume(self.active_run_id(), reason="human resume")
+        if self.context.session_id:
+            self.repository.save_session_binding(SessionBinding(
+                self.context.session_id, run.id, self.context.platform, utc_now()
+            ))
         return CommandResult(True, f"Run {run.id} resumed at {run.stage.value}.", run.id)
 
     def _abort(self, rest: list[str]) -> CommandResult:

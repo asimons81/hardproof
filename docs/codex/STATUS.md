@@ -2,11 +2,11 @@
 
 - Current release: v0.1.0
 - Current release phase: implementation
-- Last completed task: Task 10 - add and register nine original protocol skills
-- Next task: Task 11 - add run context and session binding hooks
-- Test status: full suite passes (144); nine skill validations pass; Ruff/mypy/build/twine gates pass
+- Last completed task: Task 11 - persist and inject active run context
+- Next task: Task 12 - add stage-aware tool policy
+- Test status: full suite passes (154); Task 11 focus passes (10); Ruff and strict mypy clean
 - Current branch: codex/v0.1.0
 - Current version: 0.1.0
 - Unresolved blockers: none
 - External publication blockers: brand clearance; GitHub and PyPI credentials not yet assessed
-- Last updated: 2026-07-11T03:24:00-05:00
+- Last updated: 2026-07-11T03:50:00-05:00

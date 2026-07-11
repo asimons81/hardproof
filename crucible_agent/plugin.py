@@ -11,6 +11,9 @@ from crucible_agent.commands.cli import register_cli
 from crucible_agent.commands.shared import CommandContext, CommandService
 from crucible_agent.commands.slash import register_slash
 from crucible_agent.compat import require_compatible
+from crucible_agent.hooks.context import ContextHook, register_context_hooks
+from crucible_agent.hooks.sessions import SessionHooks
+from crucible_agent.services.sessions import SessionService
 from crucible_agent.tools.handlers import HandlerDependencies, register_tools
 
 
@@ -84,3 +87,13 @@ def register(ctx: Any) -> None:
 
     register_tools(ctx, tool_dependencies)
     register_skills(ctx)
+
+    def context_bundle() -> tuple[ContextHook, SessionHooks]:
+        command_service = CommandService(CommandContext(
+            Path.cwd(), actor="model", source="hook", hermes_context=ctx
+        ))
+        sessions = SessionService(command_service.repository, command_service.paths)
+        context_hook = ContextHook(sessions, command_service)
+        return context_hook, SessionHooks(sessions, context_hook)
+
+    register_context_hooks(ctx, context_bundle)
