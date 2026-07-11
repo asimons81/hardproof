@@ -359,6 +359,80 @@ class RunRepository:
                 ).fetchall()
         return tuple(Waiver.from_dict(dict(row)) for row in rows)
 
+    def list_applicable_waivers(self, run_id: str) -> tuple[Waiver, ...]:
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                """SELECT * FROM waivers
+                WHERE run_id IS NULL OR run_id=? ORDER BY created_at, id""",
+                (run_id,),
+            ).fetchall()
+        return tuple(Waiver.from_dict(dict(row)) for row in rows)
+
+    def get_waiver(self, name: str) -> Waiver:
+        with self.database.connect() as connection:
+            row = connection.execute("SELECT * FROM waivers WHERE name=?", (name,)).fetchone()
+        if row is None:
+            raise LookupError(f"waiver not found: {name}")
+        return Waiver.from_dict(dict(row))
+
+    def revoke_waiver(
+        self, name: str, actor: str, source: str, reason: str, now: str
+    ) -> Waiver:
+        current = self.get_waiver(name)
+        if current.revoked_at is not None:
+            raise ValueError(f"waiver already revoked: {name}")
+        updated = replace(
+            current, revoked_at=now, revoked_by=actor, revocation_reason=reason
+        )
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                cursor = connection.execute(
+                    """UPDATE waivers SET revoked_at=?, revoked_by=?, revocation_reason=?
+                    WHERE id=? AND revoked_at IS NULL""",
+                    (updated.revoked_at, updated.revoked_by, updated.revocation_reason, updated.id),
+                )
+                if cursor.rowcount != 1:
+                    raise RuntimeError("waiver changed concurrently; reload before revoking")
+                connection.execute(
+                    """INSERT INTO waiver_events(
+                        waiver_id, event_type, actor, source, rationale, created_at
+                    ) VALUES (?, 'revoked', ?, ?, ?, ?)""",
+                    (updated.id, actor, source, reason, updated.revoked_at),
+                )
+            except Exception:
+                connection.rollback()
+                raise
+            else:
+                connection.commit()
+        return updated
+
+    def expire_due_waivers(self, now: str) -> tuple[str, ...]:
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                rows = connection.execute(
+                    """SELECT id FROM waivers
+                    WHERE revoked_at IS NULL AND expires_at<=? ORDER BY expires_at, id""",
+                    (now,),
+                ).fetchall()
+                recorded: list[str] = []
+                for row in rows:
+                    cursor = connection.execute(
+                        """INSERT OR IGNORE INTO waiver_events(
+                            waiver_id, event_type, actor, source, rationale, created_at
+                        ) VALUES (?, 'expired', 'system', 'policy', 'expiry reached', ?)""",
+                        (row["id"], now),
+                    )
+                    if cursor.rowcount == 1:
+                        recorded.append(str(row["id"]))
+            except Exception:
+                connection.rollback()
+                raise
+            else:
+                connection.commit()
+        return tuple(recorded)
+
     def list_waiver_events(self, waiver_id: str) -> tuple[WaiverEvent, ...]:
         with self.database.connect() as connection:
             rows = connection.execute(

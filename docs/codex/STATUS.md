@@ -1,10 +1,10 @@
 # Crucible Codex Status
 
 - Current release: v0.2.0
-- Current release phase: Gatehouse Task 5 scoped human waiver lifecycle
-- Last completed task: v0.2.0 Task 4 - single ordered traceable policy engine
-- Next task: v0.2.0 Task 5 - create, match, expire, and revoke human waivers
-- Test status: 274 full-suite tests plus closing focused contracts pass; Ruff and strict mypy pass
+- Current release phase: Gatehouse Task 6 policy explanation surfaces
+- Last completed task: v0.2.0 Task 5 - scoped human waiver lifecycle
+- Next task: v0.2.0 Task 6 - historical and hypothetical policy explanations
+- Test status: 291 tests pass; 57 focused waiver/authority tests, Ruff, and strict mypy pass
 - Current branch: codex/v0.2.0
 - Current version: 0.2.0
 - Unresolved blockers: none

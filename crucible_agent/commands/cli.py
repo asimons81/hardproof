@@ -38,6 +38,8 @@ def _configure(parser: argparse.ArgumentParser) -> None:
     config.add_parser("validate")
     db = sub.add_parser("db").add_subparsers(dest="db_command", required=True)
     db.add_parser("migrate")
+    policy = sub.add_parser("policy")
+    policy.add_argument("policy_args", nargs=argparse.REMAINDER)
     sub.add_parser("complete")
 
 
@@ -67,6 +69,8 @@ def _to_argv(args: argparse.Namespace) -> list[str]:
         return [command, args.config_command]
     if command == "db":
         return [command, args.db_command]
+    if command == "policy":
+        return [command, *args.policy_args]
     return [command]
 
 

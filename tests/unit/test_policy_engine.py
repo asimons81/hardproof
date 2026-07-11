@@ -5,6 +5,7 @@ from pathlib import Path
 from crucible_agent.config import PolicyConfig, PolicyRuleConfig
 from crucible_agent.domain.enums import RunProfile, RunStage, RunStatus
 from crucible_agent.domain.models import Run
+from crucible_agent.domain.models import Waiver
 from crucible_agent.policy.tool_rules import ToolPolicyContext, evaluate_tool_call
 
 
@@ -94,3 +95,19 @@ def test_configurable_state_failure_modes_never_open_for_critical_mutation() -> 
     assert opened.action == "allow" and opened.rule_key == "state.unavailable.fail_open"
     assert closed.action == "block" and critical.action == "block"
     assert all(item.trace[-1].rule_key == item.rule_key for item in (opened, closed, critical))
+
+
+def test_exact_scoped_waiver_converts_stage_block_to_audited_allow(tmp_path: Path) -> None:
+    policy = context(tmp_path, (), RunStage.DESIGN)
+    waiver = Waiver(
+        "waiver-1", "run-1", "generated", "stage.before_implement.source_mutation",
+        "write_file", None, "generated/**", RunProfile.STANDARD, RunStage.DESIGN,
+        "reviewed", "person", "cli", NOW, "2026-07-12T20:00:00Z",
+    )
+    object.__setattr__(policy, "waivers", (waiver,))
+    object.__setattr__(policy, "effective_time", NOW)
+    decision = evaluate_tool_call("write_file", {"path": "generated/client.py"}, policy)
+    assert decision.action == "allow"
+    assert decision.rule_key == "stage.before_implement.source_mutation"
+    assert decision.waiver_id == waiver.id
+    assert decision.trace[-1].outcome == "waived"

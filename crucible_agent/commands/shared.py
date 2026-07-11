@@ -22,6 +22,7 @@ from crucible_agent.services.approvals import ApprovalService
 from crucible_agent.services.evidence import evidence_with_freshness
 from crucible_agent.services.runs import RunService
 from crucible_agent.services.reports import ReportService
+from crucible_agent.services.waivers import WaiverService
 from crucible_agent.storage.database import Database, DatabaseCorruptionError
 from crucible_agent.storage.migrations import MigrationError, migrate
 from crucible_agent.storage.repository import RunRepository
@@ -146,6 +147,7 @@ class CommandService:
             "abort": self._abort, "evidence": self._evidence, "export": self._export,
             "doctor": self._doctor, "runs": self._runs, "show": self._show,
             "config": self._config, "db": self._db, "complete": self._complete,
+            "policy": self._policy,
         }
         if command not in handlers:
             raise ValueError(f"unknown Crucible subcommand: {command}")
@@ -328,6 +330,95 @@ class CommandService:
         applied = migrate(self.database)
         detail = ", ".join(map(str, applied)) if applied else "already current"
         return CommandResult(True, f"Database migration: {detail}")
+
+    @staticmethod
+    def _command_options(rest: list[str], allowed: frozenset[str]) -> dict[str, str | bool]:
+        options: dict[str, str | bool] = {}
+        index = 0
+        while index < len(rest):
+            key = rest[index]
+            if key not in allowed or key in options:
+                raise ValueError(f"unknown or duplicate policy option: {key}")
+            if key == "--global":
+                options[key] = True
+                index += 1
+                continue
+            if index + 1 >= len(rest):
+                raise ValueError(f"policy option requires a value: {key}")
+            options[key] = rest[index + 1]
+            index += 2
+        return options
+
+    def _policy(self, rest: list[str]) -> CommandResult:
+        if len(rest) < 2 or rest[0] != "waivers":
+            raise ValueError("usage: policy waivers <list|create|revoke>")
+        action = rest[1]
+        service = WaiverService(self.repository)
+        run_id = self.active_run_id()
+        if action == "list":
+            if len(rest) != 2:
+                raise ValueError("usage: policy waivers list")
+            now = utc_now()
+            service.expire_due(now)
+            waivers = service.list_applicable(run_id)
+            if not waivers:
+                return CommandResult(True, "No applicable policy waivers.", run_id)
+            lines = []
+            for waiver in waivers:
+                status = "revoked" if waiver.revoked_at else (
+                    "expired" if waiver.expires_at <= now else "active"
+                )
+                lines.append(
+                    f"{waiver.name} {waiver.rule_key} {status} expires={waiver.expires_at}"
+                )
+            return CommandResult(True, "\n".join(lines), run_id)
+        if action == "create":
+            if len(rest) < 4:
+                raise ValueError(
+                    "usage: policy waivers create <name> <rule-key> --expires <time> "
+                    "--reason <text> [scope options]"
+                )
+            options = self._command_options(
+                rest[4:],
+                frozenset({
+                    "--expires", "--reason", "--tool", "--command-sha256", "--path",
+                    "--profile", "--stage", "--global",
+                }),
+            )
+            expires = options.get("--expires")
+            reason = options.get("--reason")
+            if not isinstance(expires, str) or not isinstance(reason, str):
+                raise ValueError("policy waiver creation requires --expires and --reason")
+            profile_value = options.get("--profile")
+            stage_value = options.get("--stage")
+            waiver = service.create_human(
+                run_id=None if options.get("--global") else run_id,
+                name=rest[2], rule_key=rest[3], rationale=reason,
+                actor=self.context.actor, source=self.context.source,
+                created_at=utc_now(), expires_at=expires,
+                tool_name=str(options["--tool"]) if "--tool" in options else None,
+                command_sha256=(
+                    str(options["--command-sha256"])
+                    if "--command-sha256" in options else None
+                ),
+                path_scope=str(options["--path"]) if "--path" in options else None,
+                profile=RunProfile(str(profile_value)) if profile_value is not None else None,
+                stage=RunStage(str(stage_value)) if stage_value is not None else None,
+            )
+            return CommandResult(True, f"Policy waiver created: {waiver.name}.", run_id)
+        if action == "revoke":
+            if len(rest) < 3:
+                raise ValueError("usage: policy waivers revoke <name> --reason <text>")
+            options = self._command_options(rest[3:], frozenset({"--reason"}))
+            reason = options.get("--reason")
+            if not isinstance(reason, str):
+                raise ValueError("policy waiver revocation requires --reason")
+            waiver = service.revoke_human(
+                rest[2], actor=self.context.actor, source=self.context.source,
+                reason=reason, now=utc_now(),
+            )
+            return CommandResult(True, f"Policy waiver revoked: {waiver.name}.", run_id)
+        raise ValueError("usage: policy waivers <list|create|revoke>")
 
     def _complete(self, rest: list[str]) -> CommandResult:
         self._expect_no_args("complete", rest)

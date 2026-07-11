@@ -33,6 +33,9 @@ CREATE TABLE waiver_events (
     created_at TEXT NOT NULL
 );
 CREATE INDEX waiver_events_waiver_sequence ON waiver_events(waiver_id, sequence);
+CREATE UNIQUE INDEX waiver_events_terminal_once
+ON waiver_events(waiver_id, event_type)
+WHERE event_type IN ('revoked', 'expired');
 
 CREATE TABLE policy_decisions (
     sequence INTEGER PRIMARY KEY AUTOINCREMENT,

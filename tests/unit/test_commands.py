@@ -90,6 +90,7 @@ def test_slash_and_cli_use_same_command_service_output(tmp_path: Path) -> None:
         ["waive", "gate", "reason"], ["pause"], ["resume"], ["abort", "reason"],
         ["evidence"], ["export"], ["doctor"], ["runs"], ["show", "run-id"],
         ["config", "init"], ["config", "validate"], ["db", "migrate"], ["complete"],
+        ["policy", "waivers", "list"],
     ],
 )
 def test_cli_parser_accepts_every_documented_subcommand(argv: list[str]) -> None:
@@ -103,3 +104,25 @@ def test_malformed_slash_arguments_return_concise_error(tmp_path: Path, raw: str
     output = asyncio.run(handler(raw))
     assert output.startswith("Crucible error:")
     assert len(output) < 500
+
+
+def test_policy_waiver_commands_are_human_only_and_share_cli_slash_path(tmp_path: Path) -> None:
+    service = CommandService(context(tmp_path, source="cli"))
+    service.execute(["start", "standard", "waiver command"])
+    created = service.execute([
+        "policy", "waivers", "create", "generated", "stage.before_implement.source_mutation",
+        "--expires", "2026-07-12T20:00:00Z", "--reason", "reviewed",
+        "--tool", "write_file", "--path", "generated/**", "--stage", "DESIGN",
+    ])
+    assert created.ok and "generated" in created.text
+    assert "generated" in service.execute(["policy", "waivers", "list"]).text
+    assert service.execute([
+        "policy", "waivers", "revoke", "generated", "--reason", "complete"
+    ]).ok
+
+    model = CommandService(CommandContext(tmp_path, actor="model", source="tool"))
+    with pytest.raises(PermissionError, match="human"):
+        model.execute([
+            "policy", "waivers", "create", "forbidden", "project.rule",
+            "--expires", "2026-07-12T20:00:00Z", "--reason", "no",
+        ])

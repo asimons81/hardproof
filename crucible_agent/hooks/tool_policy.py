@@ -12,6 +12,7 @@ from crucible_agent.domain.enums import RunProfile
 from crucible_agent.domain.models import PolicyDecisionRecord, new_id, utc_now
 from crucible_agent.policy.tool_rules import ToolPolicyContext, evaluate_tool_call
 from crucible_agent.services.sessions import SessionService
+from crucible_agent.services.waivers import WaiverService
 
 
 class ToolPolicyHook:
@@ -36,6 +37,9 @@ class ToolPolicyHook:
             return None
         self.last_profiles[session_id] = run.profile
         config = load_config(self.commands.paths.config)
+        effective_time = utc_now()
+        waiver_service = WaiverService(self.commands.repository)
+        waiver_service.expire_due(effective_time)
         self.last_failure_modes[session_id] = config.policy.state_failure_mode
         return ToolPolicyContext(
             run,
@@ -44,6 +48,8 @@ class ToolPolicyHook:
             frozenset(config.mutating_tools),
             policy=config.policy,
             config_sha256=config_fingerprint(config),
+            waivers=self.commands.repository.list_applicable_waivers(run.id),
+            effective_time=effective_time,
         )
 
     def pre_tool_call(self, **kwargs: Any) -> dict[str, str] | None:
@@ -71,7 +77,7 @@ class ToolPolicyHook:
                         new_id("policy"), context.run.id, tool_name, decision.action,
                         decision.rule_key, decision.reason, decision.trace,
                         str(audit["arguments_sha256"]), context.config_sha256,
-                        None, None, utc_now(),
+                        decision.waiver_id, None, utc_now(),
                     )
                 )
             except Exception:

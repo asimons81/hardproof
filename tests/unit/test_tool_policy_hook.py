@@ -7,6 +7,7 @@ from crucible_agent.commands.shared import CommandContext, CommandService
 from crucible_agent.domain.enums import RunStage
 from crucible_agent.hooks.tool_policy import ToolPolicyHook
 from crucible_agent.services.sessions import SessionService
+from crucible_agent.services.waivers import WaiverService
 
 
 def setup(tmp_path: Path) -> tuple[CommandService, ToolPolicyHook]:
@@ -117,3 +118,21 @@ policy:
     record = commands.repository.list_policy_decisions(commands.active_run_id())[-1]
     assert record.rule_key == "project.echo.deny"
     assert record.trace[-1].outcome == "matched"
+
+
+def test_hook_applies_exact_waiver_and_persists_waiver_identity(tmp_path: Path) -> None:
+    commands, hook = setup(tmp_path)
+    commands.repository.transition_run(commands.active_run_id(), RunStage.VERIFY, reason="fixture")
+    waiver = WaiverService(commands.repository).create_human(
+        run_id=commands.active_run_id(), name="verify-edit",
+        rule_key="stage.after_implement.source_mutation", rationale="reviewed exception",
+        actor="person", source="cli", created_at="2026-07-11T00:00:00Z",
+        expires_at="2099-07-12T00:00:00Z", tool_name="write_file",
+        path_scope="generated/**", stage=RunStage.VERIFY,
+    )
+    assert hook.pre_tool_call(
+        session_id="session-a", tool_name="write_file", args={"path": "generated/client.py"}
+    ) is None
+    record = commands.repository.list_policy_decisions(commands.active_run_id())[-1]
+    assert record.action == "allow" and record.waiver_id == waiver.id
+    assert record.trace[-1].outcome == "waived"

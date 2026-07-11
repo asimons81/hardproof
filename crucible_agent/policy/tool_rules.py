@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import re
 from dataclasses import dataclass
 from dataclasses import replace
@@ -11,9 +12,10 @@ from typing import Any
 
 from crucible_agent.config import PolicyConfig, PolicyRuleConfig
 from crucible_agent.domain.enums import RunProfile, RunStage
-from crucible_agent.domain.models import PolicyDecision, Run
+from crucible_agent.domain.models import PolicyDecision, Run, Waiver
 from crucible_agent.policy.trace import RuleTrace
 from crucible_agent.policy.terminal import TerminalCategory, classify_terminal
+from crucible_agent.policy.waivers import WaiverScope, match_waiver
 
 
 DEFAULT_MUTATING_TOOLS = frozenset({"write_file", "patch", "edit_file", "execute_code", "terminal"})
@@ -29,6 +31,8 @@ class ToolPolicyContext:
     mutating_tools: frozenset[str] = DEFAULT_MUTATING_TOOLS
     policy: PolicyConfig = DEFAULT_POLICY
     config_sha256: str = "0" * 64
+    waivers: tuple[Waiver, ...] = ()
+    effective_time: str = "1970-01-01T00:00:00Z"
 
     def __init__(
         self,
@@ -39,6 +43,8 @@ class ToolPolicyContext:
         *,
         policy: PolicyConfig = DEFAULT_POLICY,
         config_sha256: str = "0" * 64,
+        waivers: tuple[Waiver, ...] = (),
+        effective_time: str = "1970-01-01T00:00:00Z",
     ) -> None:
         object.__setattr__(self, "run", run)
         object.__setattr__(self, "project_root", Path(project_root).resolve())
@@ -46,6 +52,8 @@ class ToolPolicyContext:
         object.__setattr__(self, "mutating_tools", mutating_tools)
         object.__setattr__(self, "policy", policy)
         object.__setattr__(self, "config_sha256", config_sha256)
+        object.__setattr__(self, "waivers", tuple(waivers))
+        object.__setattr__(self, "effective_time", effective_time)
 
 
 def _allow(rule: str, reason: str) -> PolicyDecision:
@@ -145,6 +153,37 @@ def _rule_trace(rule: PolicyRuleConfig, matched: bool) -> RuleTrace:
     return RuleTrace(rule.key, outcome, explanation)
 
 
+def _waiver_scope(
+    rule_key: str, tool_name: str, args: dict[str, Any], context: ToolPolicyContext
+) -> WaiverScope:
+    command = _command(args)
+    command_sha256 = hashlib.sha256(command.encode("utf-8")).hexdigest() if command else None
+    return WaiverScope(
+        rule_key, tool_name, command_sha256, _relative_target(args, context),
+        context.run.profile, context.run.stage, context.run.id, context.effective_time,
+    )
+
+
+def _apply_waiver(
+    decision: PolicyDecision,
+    tool_name: str,
+    args: dict[str, Any],
+    context: ToolPolicyContext,
+) -> PolicyDecision:
+    if decision.action not in {"block", "approval"}:
+        return decision
+    waiver = match_waiver(context.waivers, _waiver_scope(decision.rule_key, tool_name, args, context))
+    if waiver is None:
+        return decision
+    trace = decision.trace[:-1] + (
+        RuleTrace(decision.rule_key, "waived", "An active exact-scope human waiver matched."),
+    )
+    return PolicyDecision(
+        "allow", decision.rule_key, "An active exact-scope human waiver matched.",
+        False, trace, waiver.id,
+    )
+
+
 def _core_decision(
     tool_name: str, args: dict[str, Any], context: ToolPolicyContext
 ) -> PolicyDecision:
@@ -221,11 +260,15 @@ def evaluate_tool_call(
                     if action == "block"
                     else _approval(rule.key, f"Project approval rule {rule.key} matched.")
                 )
-                return replace(decision, trace=tuple(prefix))
+                return _apply_waiver(
+                    replace(decision, trace=tuple(prefix)), tool_name, args, context
+                )
 
     core = _core_decision(tool_name, args, context)
     if core.action != "allow":
-        return replace(core, trace=tuple(prefix) + core.trace)
+        return _apply_waiver(
+            replace(core, trace=tuple(prefix) + core.trace), tool_name, args, context
+        )
 
     core_trace = RuleTrace(core.rule_key, "superseded", core.reason)
     allow_traces: list[RuleTrace] = []

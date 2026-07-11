@@ -308,6 +308,7 @@ class PolicyDecision(Serializable):
     reason: str
     requires_human_approval: bool = False
     trace: tuple[RuleTrace, ...] = ()
+    waiver_id: str | None = None
 
     _tuple_fields: ClassVar[tuple[str, ...]] = ("trace",)
 
