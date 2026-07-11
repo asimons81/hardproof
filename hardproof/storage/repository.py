@@ -12,13 +12,17 @@ from hardproof.domain.models import (
     Decision,
     Evidence,
     Event,
+    PolicyDecisionRecord,
+    RiskSuggestion,
     Run,
     SessionBinding,
     Task,
     VerificationCheck,
+    Waiver,
+    WaiverEvent,
     utc_now,
 )
-from hardproof.domain.enums import RunStage, RunStatus
+from hardproof.domain.enums import RiskLevel, RunStage, RunStatus
 from hardproof.storage.database import Database
 
 
@@ -314,6 +318,229 @@ class RunRepository:
         return self._list_models(
             "SELECT * FROM evidence WHERE run_id=? ORDER BY completed_at, id", run_id, Evidence
         )
+
+    def add_waiver(self, waiver: Waiver) -> None:
+        data = waiver.to_dict()
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                connection.execute(
+                    """INSERT INTO waivers(
+                        id, run_id, name, rule_key, tool_name, command_sha256, path_scope,
+                        profile, stage, rationale, actor, source, created_at, expires_at,
+                        revoked_at, revoked_by, revocation_reason
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    tuple(data[key] for key in (
+                        "id", "run_id", "name", "rule_key", "tool_name", "command_sha256",
+                        "path_scope", "profile", "stage", "rationale", "actor", "source",
+                        "created_at", "expires_at", "revoked_at", "revoked_by",
+                        "revocation_reason",
+                    )),
+                )
+                connection.execute(
+                    """INSERT INTO waiver_events(
+                        waiver_id, event_type, actor, source, rationale, created_at
+                    ) VALUES (?, 'created', ?, ?, ?, ?)""",
+                    (waiver.id, waiver.actor, waiver.source, waiver.rationale, waiver.created_at),
+                )
+            except Exception:
+                connection.rollback()
+                raise
+            else:
+                connection.commit()
+
+    def list_waivers(self, run_id: str | None = None) -> tuple[Waiver, ...]:
+        with self.database.connect() as connection:
+            if run_id is None:
+                rows = connection.execute("SELECT * FROM waivers ORDER BY created_at, id").fetchall()
+            else:
+                rows = connection.execute(
+                    "SELECT * FROM waivers WHERE run_id=? ORDER BY created_at, id", (run_id,)
+                ).fetchall()
+        return tuple(Waiver.from_dict(dict(row)) for row in rows)
+
+    def list_applicable_waivers(self, run_id: str) -> tuple[Waiver, ...]:
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                """SELECT * FROM waivers
+                WHERE run_id IS NULL OR run_id=? ORDER BY created_at, id""",
+                (run_id,),
+            ).fetchall()
+        return tuple(Waiver.from_dict(dict(row)) for row in rows)
+
+    def get_waiver(self, name: str) -> Waiver:
+        with self.database.connect() as connection:
+            row = connection.execute("SELECT * FROM waivers WHERE name=?", (name,)).fetchone()
+        if row is None:
+            raise LookupError(f"waiver not found: {name}")
+        return Waiver.from_dict(dict(row))
+
+    def revoke_waiver(
+        self, name: str, actor: str, source: str, reason: str, now: str
+    ) -> Waiver:
+        current = self.get_waiver(name)
+        if current.revoked_at is not None:
+            raise ValueError(f"waiver already revoked: {name}")
+        updated = replace(
+            current, revoked_at=now, revoked_by=actor, revocation_reason=reason
+        )
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                cursor = connection.execute(
+                    """UPDATE waivers SET revoked_at=?, revoked_by=?, revocation_reason=?
+                    WHERE id=? AND revoked_at IS NULL""",
+                    (updated.revoked_at, updated.revoked_by, updated.revocation_reason, updated.id),
+                )
+                if cursor.rowcount != 1:
+                    raise RuntimeError("waiver changed concurrently; reload before revoking")
+                connection.execute(
+                    """INSERT INTO waiver_events(
+                        waiver_id, event_type, actor, source, rationale, created_at
+                    ) VALUES (?, 'revoked', ?, ?, ?, ?)""",
+                    (updated.id, actor, source, reason, updated.revoked_at),
+                )
+            except Exception:
+                connection.rollback()
+                raise
+            else:
+                connection.commit()
+        return updated
+
+    def expire_due_waivers(self, now: str) -> tuple[str, ...]:
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                rows = connection.execute(
+                    """SELECT id FROM waivers
+                    WHERE revoked_at IS NULL AND expires_at<=? ORDER BY expires_at, id""",
+                    (now,),
+                ).fetchall()
+                recorded: list[str] = []
+                for row in rows:
+                    cursor = connection.execute(
+                        """INSERT OR IGNORE INTO waiver_events(
+                            waiver_id, event_type, actor, source, rationale, created_at
+                        ) VALUES (?, 'expired', 'system', 'policy', 'expiry reached', ?)""",
+                        (row["id"], now),
+                    )
+                    if cursor.rowcount == 1:
+                        recorded.append(str(row["id"]))
+            except Exception:
+                connection.rollback()
+                raise
+            else:
+                connection.commit()
+        return tuple(recorded)
+
+    def list_waiver_events(self, waiver_id: str) -> tuple[WaiverEvent, ...]:
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM waiver_events WHERE waiver_id=? ORDER BY sequence", (waiver_id,)
+            ).fetchall()
+        return tuple(WaiverEvent.from_dict(dict(row)) for row in rows)
+
+    def add_policy_decision(self, record: PolicyDecisionRecord) -> None:
+        with self.database.connect() as connection:
+            connection.execute(
+                """INSERT INTO policy_decisions(
+                    id, run_id, tool_name, action, rule_key, reason, trace_json,
+                    arguments_sha256, config_sha256, waiver_id, suggested_risk, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    record.id, record.run_id, record.tool_name, record.action, record.rule_key,
+                    record.reason,
+                    json.dumps([item.to_dict() for item in record.trace], sort_keys=True),
+                    record.arguments_sha256, record.config_sha256, record.waiver_id,
+                    record.suggested_risk.value if record.suggested_risk else None,
+                    record.created_at,
+                ),
+            )
+
+    def list_policy_decisions(self, run_id: str) -> tuple[PolicyDecisionRecord, ...]:
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM policy_decisions WHERE run_id=? ORDER BY sequence", (run_id,)
+            ).fetchall()
+        records: list[PolicyDecisionRecord] = []
+        for row in rows:
+            payload = dict(row)
+            payload["trace"] = json.loads(payload.pop("trace_json"))
+            records.append(PolicyDecisionRecord.from_dict(payload))
+        return tuple(records)
+
+    def get_policy_decision(self, run_id: str, sequence: int) -> PolicyDecisionRecord:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM policy_decisions WHERE run_id=? AND sequence=?",
+                (run_id, sequence),
+            ).fetchone()
+        if row is None:
+            raise LookupError(f"policy decision not found: {sequence}")
+        payload = dict(row)
+        payload["trace"] = json.loads(payload.pop("trace_json"))
+        return PolicyDecisionRecord.from_dict(payload)
+
+    def add_risk_suggestion(self, suggestion: RiskSuggestion) -> None:
+        with self.database.connect() as connection:
+            connection.execute(
+                """INSERT INTO risk_suggestions(
+                    id, run_id, task_id, suggested_risk, reasons_json, accepted_risk,
+                    override_rationale, created_at, accepted_by, accepted_source, decided_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    suggestion.id, suggestion.run_id, suggestion.task_id,
+                    suggestion.suggested_risk.value, json.dumps(suggestion.reasons),
+                    suggestion.accepted_risk.value if suggestion.accepted_risk else None,
+                    suggestion.override_rationale, suggestion.created_at,
+                    suggestion.accepted_by, suggestion.accepted_source, suggestion.decided_at,
+                ),
+            )
+
+    def list_risk_suggestions(self, run_id: str) -> tuple[RiskSuggestion, ...]:
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM risk_suggestions WHERE run_id=? ORDER BY sequence", (run_id,)
+            ).fetchall()
+        suggestions: list[RiskSuggestion] = []
+        for row in rows:
+            payload = dict(row)
+            payload.pop("sequence")
+            payload["reasons"] = json.loads(payload.pop("reasons_json"))
+            suggestions.append(RiskSuggestion.from_dict(payload))
+        return tuple(suggestions)
+
+    def get_risk_suggestion(self, suggestion_id: str) -> RiskSuggestion:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM risk_suggestions WHERE id=?", (suggestion_id,)
+            ).fetchone()
+        if row is None:
+            raise LookupError(f"risk suggestion not found: {suggestion_id}")
+        payload = dict(row)
+        payload.pop("sequence")
+        payload["reasons"] = json.loads(payload.pop("reasons_json"))
+        return RiskSuggestion.from_dict(payload)
+
+    def decide_risk_suggestion(
+        self,
+        suggestion_id: str,
+        accepted_risk: RiskLevel,
+        rationale: str,
+        actor: str,
+        source: str,
+        now: str,
+    ) -> RiskSuggestion:
+        with self.database.connect() as connection:
+            cursor = connection.execute(
+                """UPDATE risk_suggestions SET accepted_risk=?, override_rationale=?,
+                accepted_by=?, accepted_source=?, decided_at=?
+                WHERE id=? AND accepted_risk IS NULL""",
+                (accepted_risk.value, rationale or None, actor, source, now, suggestion_id),
+            )
+        if cursor.rowcount != 1:
+            raise ValueError("risk suggestion not found or already decided")
+        return self.get_risk_suggestion(suggestion_id)
 
     def _list_models(self, sql: str, run_id: str, model: Any) -> tuple[Any, ...]:
         with self.database.connect() as connection:

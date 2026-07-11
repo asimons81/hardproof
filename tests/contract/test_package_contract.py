@@ -16,7 +16,7 @@ def test_version_metadata_matches_manifest() -> None:
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     manifest = yaml.safe_load((ROOT / "plugin.yaml").read_text(encoding="utf-8"))
     package = importlib.import_module("hardproof")
-    assert metadata["project"]["version"] == "0.1.1"
+    assert metadata["project"]["version"] == "0.2.0"
     assert metadata["project"]["version"] == manifest["version"] == package.__version__
 
 
@@ -35,4 +35,5 @@ def test_built_wheel_contains_required_package_data() -> None:
         names = set(archive.namelist())
     assert "hardproof/templates/completion.md" in names
     assert "hardproof/migrations/001_initial.sql" in names
+    assert "hardproof/migrations/002_gatehouse.sql" in names
     assert "hardproof/skills/orchestrate/SKILL.md" in names

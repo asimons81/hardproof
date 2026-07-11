@@ -19,12 +19,12 @@ def test_database_enables_required_pragmas(tmp_path: Path) -> None:
 
 def test_migration_is_idempotent_and_reopenable(tmp_path: Path) -> None:
     database = Database(tmp_path / "hardproof.db")
-    assert migrate(database) == (1,)
+    assert migrate(database) == (1, 2)
     assert migrate(database) == ()
     with database.connect() as connection:
         assert [row[0] for row in connection.execute(
             "SELECT version FROM schema_migrations"
-        ).fetchall()] == [1]
+        ).fetchall()] == [1, 2]
 
 
 def test_interrupted_migration_rolls_back(tmp_path: Path) -> None:

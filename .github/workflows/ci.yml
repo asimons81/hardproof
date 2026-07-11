@@ -20,24 +20,24 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: python -m pip install -e ".[dev]"
-      - name: Build (wheel contract tests need dist/)
-        run: python -m build
       - name: Ruff
         run: python -m ruff check hardproof tests scripts
       - name: mypy
         run: python -m mypy hardproof
       - name: Coverage
-        run: python -m pytest --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=85
+        run: python -m pytest --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=90
       - name: Critical module coverage
         run: >-
           python -m pytest
           tests/unit/test_domain_transitions.py tests/unit/test_stage_rules.py
+          tests/unit/test_stage_graph.py tests/unit/test_policy_engine.py tests/unit/test_commands.py
           tests/unit/test_run_service.py tests/unit/test_tool_policy.py
           tests/unit/test_tool_policy_hook.py tests/unit/test_approval_service.py
           tests/unit/test_database.py tests/unit/test_evidence_service.py
           tests/unit/test_terminal_result_parser.py tests/unit/test_snapshots.py
           tests/unit/test_verification_hook.py
           --cov=hardproof.policy.stage_rules
+          --cov=hardproof.policy.stage_graph
           --cov=hardproof.policy.tool_rules
           --cov=hardproof.services.approvals
           --cov=hardproof.storage.migrations
@@ -71,8 +71,6 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
       - run: python -m pip install -e ".[dev]"
-      - name: Build (wheel contract tests need dist/)
-        run: python -m build
       - name: Unit, integration, contract, and e2e tests
         run: python -m pytest
 

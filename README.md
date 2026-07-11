@@ -5,7 +5,7 @@
 [![CI](https://github.com/asimons81/hardproof/actions/workflows/ci.yml/badge.svg)](https://github.com/asimons81/hardproof/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-> **Alpha software.** Latest public alpha: v0.1.1. Development continues on v0.2.0 Gatehouse. Commands, schemas, and contracts may change before v1.0.0.
+> **Alpha software.** v0.1.1 is the current signed public alpha on PyPI. v0.2.0 Gatehouse is an unpublished release candidate. Commands, schemas, and contracts may change before v1.0.0.
 
 Hardproof gives coding agents a persistent, risk-aware engineering process that turns ambiguous software requests into reviewed, verified results while preserving the evidence behind every completion claim.
 
@@ -15,13 +15,13 @@ Hardproof gives coding agents a persistent, risk-aware engineering process that 
 
 | Release | Version | Status |
 |---------|---------|--------|
-| Latest public alpha | v0.1.1 | Released on GitHub and PyPI |
-| Original public alpha | v0.1.0 Core Heat | Released on GitHub (immutable) |
-| Active development | v0.2.0 Gatehouse | Task 8 (stage-graph configuration) next |
+| Public alpha | v0.1.1 Core Heat | Released on GitHub and PyPI |
+| Release candidate | v0.2.0 Gatehouse | Complete locally; independent audit pending |
+| Future | v0.3.0 Workcells | Not started |
 
 ## Install and enable
 
-From PyPI (recommended):
+From PyPI (current public v0.1.1):
 
 ```bash
 pip install hardproof
@@ -104,18 +104,28 @@ See [SECURITY.md](SECURITY.md) and the [security model](docs/security-model.md).
 
 Hardproof has **no telemetry, no analytics, no accounts, no hosted dependencies, no remote asset fetching, and no automatic update checks.** Normal local operation makes no intentional network request. Verification output is redacted and size-bounded. Policy events store argument keys and hashes rather than raw values. Nothing phones home.
 
-## Known Limitations in v0.1.0
+## Gatehouse v0.2.0 release candidate
+
+Gatehouse adds strict project allow/deny/approval rules, ordered policy explanations, human-only
+scoped waivers, advisory risk suggestions, bounded monotonic stage graphs, configuration and
+migration diagnostics, and versioned Python/Node/Rust/Go policy packs. See
+[configuration and migrations](docs/configuration-and-migrations.md) and
+[policy packs](docs/policy-packs.md). It is not yet published.
+
+## Known limitations
 
 - Policy hooks coordinate process but are not a security sandbox or complete shell parser
 - Managed runs require a Git worktree for workspace-bound freshness evidence
 - Local compatibility evidence covers Hermes Agent 0.18.2 on native Windows; other OS support is CI-enforced
-- Gatehouse policy features (configurable rules, waivers, risk suggestions) ship in v0.2.0
+- Policy hooks coordinate process; they are not an OS security sandbox or complete shell parser.
+- macOS and Linux results require the independent remote CI audit; current RC evidence is Windows.
+- Downgrade from a migrated v0.2.0 database is not claimed safe.
 
 ## Roadmap
 
 | Version | Codename | Focus |
 |---------|----------|-------|
-| v0.1.0 | Core Heat | Standalone plugin, durable stages, SQLite state, approvals, skills, fresh evidence, reports |
+| v0.1.1 | Core Heat | Current public alpha: standalone plugin, durable stages, SQLite state, approvals, skills, fresh evidence, reports |
 | v0.2.0 | Gatehouse | Explainable configurable policy, scoped waivers, risk suggestions, language packs |
 | v0.3.0 | Workcells | Dependency-aware task waves, resumable subagent implementers |
 | v0.4.0 | Challenge Chamber | Independent specialized reviewers, severity, fix/re-review loops |

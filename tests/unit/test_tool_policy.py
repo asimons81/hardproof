@@ -7,6 +7,7 @@ import pytest
 from hardproof.domain.enums import RunProfile, RunStage, RunStatus
 from hardproof.domain.models import Run
 from hardproof.policy.tool_rules import ToolPolicyContext, evaluate_tool_call
+from hardproof.config import PolicyConfig, PolicyRuleConfig
 
 
 NOW = "2026-07-11T09:00:00Z"
@@ -145,3 +146,61 @@ def test_missing_target_is_never_treated_as_an_artifact_write(tmp_path: Path) ->
     )
     assert decision.action == "block"
     assert decision.rule_key == "stage.before_implement.source_mutation"
+
+
+def test_chained_force_push_cannot_hide_after_safe_command(tmp_path: Path) -> None:
+    decision = evaluate_tool_call(
+        "terminal",
+        {"command": "python -m pytest && git push origin main --force-with-lease"},
+        context(tmp_path, RunStage.DELIVER, RunProfile.CRITICAL),
+    )
+    assert decision.action == "block"
+    assert decision.rule_key == "terminal.immutable.force_push"
+
+
+def test_malformed_terminal_input_is_blocked_with_safe_explanation(tmp_path: Path) -> None:
+    decision = evaluate_tool_call(
+        "terminal", {"command": "echo 'unterminated"}, context(tmp_path, RunStage.IMPLEMENT)
+    )
+    assert decision.action == "block"
+    assert decision.rule_key == "terminal.ambiguous"
+    assert "unterminated" not in decision.reason
+
+
+def test_selected_pack_elevates_publish_with_explainable_key(tmp_path: Path) -> None:
+    configured = ToolPolicyContext(
+        run(RunStage.IMPLEMENT), tmp_path, tmp_path / ".hardproof/runs/run-1",
+        policy=PolicyConfig("profile", (), ("rust",), {}),
+    )
+    decision = evaluate_tool_call("terminal", {"command": "cargo publish"}, configured)
+    assert decision.action == "block"
+    assert decision.rule_key == "pack.rust.publish"
+
+
+def test_deployment_at_deliver_is_profile_aware(tmp_path: Path) -> None:
+    standard = evaluate_tool_call(
+        "terminal", {"command": "vercel deploy"}, context(tmp_path, RunStage.DELIVER)
+    )
+    critical = evaluate_tool_call(
+        "terminal", {"command": "vercel deploy"},
+        context(tmp_path, RunStage.DELIVER, RunProfile.CRITICAL),
+    )
+    assert standard.action == "allow"
+    assert critical.action == "approval"
+
+
+def test_project_rule_scope_mismatches_remain_traceable(tmp_path: Path) -> None:
+    rules = (
+        PolicyRuleConfig("project.other_tool", "deny", ("write_file",), "scoped"),
+        PolicyRuleConfig(
+            "project.critical_only", "deny", ("terminal",), "scoped",
+            profiles=(RunProfile.CRITICAL,),
+        ),
+    )
+    configured = ToolPolicyContext(
+        run(RunStage.IMPLEMENT), tmp_path, tmp_path / ".hardproof/runs/run-1",
+        policy=PolicyConfig("profile", rules, (), {}),
+    )
+    decision = evaluate_tool_call("terminal", {"command": "git status"}, configured)
+    assert decision.action == "allow"
+    assert [item.outcome for item in decision.trace[:2]] == ["not_matched", "not_matched"]

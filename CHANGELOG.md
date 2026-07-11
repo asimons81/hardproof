@@ -1,6 +1,20 @@
 # Changelog
 
-All notable changes to Hardproof are documented in this file.
+All notable changes to Hardproof are documented here.
+
+## [0.2.0] - 2026-07-11
+
+### Added
+
+- Gatehouse policy traces, strict project rules, scoped human waivers, configurable state-failure
+  behavior, stable approval keys, and deterministic advisory risk suggestions.
+- Bounded monotonic stage-graph configuration with deterministic diagnostics.
+- Versioned data-only Python, Node, Rust, and Go policy packs.
+- Configuration explanation, database status/dry-run migration, and richer doctor diagnostics.
+
+### Changed
+
+- Prepared version 0.2.0 as an unpublished release candidate with schema migration 002.
 
 ## [0.1.1] - 2026-07-11
 
