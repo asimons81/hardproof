@@ -10,7 +10,7 @@ from hardproof.domain.enums import RunProfile, RunStage
 from hardproof.services.waivers import WaiverService, WaiverScope, match_waiver
 
 
-NOW = "2026-07-11T20:00:00Z"
+NOW = "2026-07-11T20:00:00.000Z"
 LATER = "2026-07-12T20:00:00Z"
 AFTER = "2026-07-13T20:00:00Z"
 

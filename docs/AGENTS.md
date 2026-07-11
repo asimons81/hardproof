@@ -11,13 +11,13 @@
 
 - v0.1.0, v0.1.1, and v0.2.0 are published. Do not write about them as if they are pending, unreleased, or in release-candidate status.
 - v0.3.0 has not started. Do not describe it as current work, in progress, or partially implemented.
-- Historical docs that reference a release candidate for a now-published release should be updated at the top-level status line but the remainder of the document may remain if it is a faithful historical record.
+- Historical docs that reference a pre-release state for a now-published release should be updated at the top-level status line but the remainder of the document may remain if it is a faithful historical record.
 
 ## Link Conventions
 
 - Use relative links within the repository: `[architecture](architecture.md)`. Tools like `markdown-link-check` validate these.
 - External links to GitHub issues, PRs, and releases are preferred over internal copies of that content.
-- Do not link to absolute local paths (e.g. `file:///` or `C:\\...` paths on the local filesystem).
+- Do not link to absolute local paths (e.g. `file:\\\\...` or `C:\\...` paths on the local filesystem).
 - Do not link to private resources or unpublished branches.
 
 ## Command Verification
@@ -33,7 +33,7 @@ Do not invent aliases or syntax that doesn't exist in the parser.
 
 ## Prohibited Content
 
-- No local paths (e.g. `C:\\projects\\secret.txt`, `/home/user/data/`)
+- No local paths (e.g. `C:\\projects\\secret.txt`, `/var/tmp/data/`)
 - No private transcripts
 - No environment dumps
 - No credentials or secret material

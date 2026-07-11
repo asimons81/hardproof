@@ -167,3 +167,25 @@ def test_failed_evidence_is_not_fresh_and_remains_failed(tmp_path: Path) -> None
     record = evidence.verify(run.id)[0]
     assert not evidence.is_fresh(record)
     assert evidence.freshness_status(record) is EvidenceStatus.FAILED
+
+
+def test_latest_pass_overrides_stale_for_same_check_name(tmp_path: Path) -> None:
+    """Regression: same-second evidence records must order by completed_at with
+    millisecond precision so the latest passing evidence is not shadowed by an
+    earlier stale record with the same check_name."""
+    evidence, _, run = service(tmp_path, CommandResult(0, "passed"))
+    first = evidence.verify(run.id)[0]
+    assert first.status is EvidenceStatus.PASSED
+    # Simulate a workspace change that makes the first evidence stale
+    (tmp_path / "code.py").write_text("VALUE = 2\n", encoding="utf-8")
+    assert evidence.freshness_status(first) is EvidenceStatus.STALE
+    # Second verify produces fresh evidence for the same check
+    second = evidence.verify(run.id)[0]
+    assert second.status is EvidenceStatus.PASSED
+    assert evidence.is_fresh(second)
+    # passing_check_names should see the latest (second, fresh) record
+    from hardproof.policy.verification_rules import passing_check_names, verification_blocker
+    all_evidence = (first, second)
+    names = passing_check_names(all_evidence)
+    assert "check-0" in names
+    assert verification_blocker(RunProfile.STANDARD, all_evidence) is None

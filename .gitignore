@@ -10,6 +10,7 @@ __pycache__/
 venv/
 build/
 dist/
+distributions/
 .hardproof/
 *.db
 *.sqlite
