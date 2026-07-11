@@ -1,0 +1,20 @@
+name: crucible
+version: 0.1.0
+description: Persistent, risk-aware engineering protocol with durable verification evidence.
+author: Crucible Agent contributors
+kind: workflow
+provides_tools:
+  - crucible_run
+  - crucible_record
+  - crucible_task
+  - crucible_transition
+  - crucible_verify
+  - crucible_report
+provides_hooks:
+  - pre_llm_call
+  - pre_tool_call
+  - post_tool_call
+  - pre_verify
+  - on_session_start
+  - on_session_finalize
+  - on_session_reset

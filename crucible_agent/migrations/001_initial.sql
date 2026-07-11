@@ -1,0 +1,1 @@
+-- Schema is introduced by Task 4. This packaged resource reserves the stable path.
