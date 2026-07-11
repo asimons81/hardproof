@@ -16,6 +16,7 @@ from hardproof.domain.models import PolicyDecision, Run, Waiver
 from hardproof.policy.trace import RuleTrace
 from hardproof.policy.terminal import TerminalCategory, classify_terminal
 from hardproof.policy.waivers import WaiverScope, match_waiver
+from hardproof.policy.packs import classify_with_packs
 
 
 DEFAULT_MUTATING_TOOLS = frozenset({"write_file", "patch", "edit_file", "execute_code", "terminal"})
@@ -100,6 +101,9 @@ def _inside(path: Path | None, parent: Path) -> bool:
 def _terminal_policy(command: str, context: ToolPolicyContext) -> PolicyDecision | None:
     classification = classify_terminal(command)
     primary = classification.primary
+    packed = classify_with_packs(primary.tokens, context.policy.packs)
+    if packed is not None:
+        primary = packed
     if primary.category is TerminalCategory.AMBIGUOUS:
         return _block(primary.rule_key, primary.explanation)
     if primary.rule_key == "terminal.immutable.force_push":
