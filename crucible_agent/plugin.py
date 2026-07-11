@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from crucible_agent.compat import require_compatible
+
 
 def register(ctx: Any) -> None:
     """Register Crucible with Hermes.
@@ -11,3 +13,4 @@ def register(ctx: Any) -> None:
     Registration is populated task-by-task as the public compatibility,
     command, tool, hook, and skill surfaces are implemented.
     """
+    require_compatible(ctx)
