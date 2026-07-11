@@ -5,7 +5,7 @@
 [![CI](https://github.com/asimons81/hardproof/actions/workflows/ci.yml/badge.svg)](https://github.com/asimons81/hardproof/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-> **Alpha software.** v0.1.0 is a public alpha. Latest development is v0.2.0 Gatehouse. Commands, schemas, and contracts may change before v1.0.0. Install from GitHub; PyPI publication is pending.
+> **Alpha software.** Latest public alpha: v0.1.1. Development continues on v0.2.0 Gatehouse. Commands, schemas, and contracts may change before v1.0.0.
 
 Hardproof gives coding agents a persistent, risk-aware engineering process that turns ambiguous software requests into reviewed, verified results while preserving the evidence behind every completion claim.
 
@@ -15,22 +15,23 @@ Hardproof gives coding agents a persistent, risk-aware engineering process that 
 
 | Release | Version | Status |
 |---------|---------|--------|
-| Public alpha | v0.1.0 Core Heat | Released |
+| Latest public alpha | v0.1.1 | Released on GitHub and PyPI |
+| Original public alpha | v0.1.0 Core Heat | Released on GitHub (immutable) |
 | Active development | v0.2.0 Gatehouse | Task 8 (stage-graph configuration) next |
 
 ## Install and enable
 
-From GitHub (only option until PyPI publication):
-
-```bash
-hermes plugins install asimons81/hardproof --enable
-```
-
-From PyPI (not yet published -- this will work once the package is uploaded):
+From PyPI (recommended):
 
 ```bash
 pip install hardproof
 hermes plugins enable hardproof
+```
+
+From GitHub:
+
+```bash
+hermes plugins install asimons81/hardproof --enable
 ```
 
 Plugins remain opt-in under Hermes configuration. Hardproof does not edit global instructions or install skills into the user's global skill directory.
