@@ -152,7 +152,7 @@ class EvidenceService:
             result = self.runner.run(check.command, timeout_override or check.timeout_seconds)
             completed = utc_now()
             after = self.snapshotter(self.project_root)
-            if before != after:
+            if not before.matches_workspace(after):
                 status = EvidenceStatus.INDETERMINATE
             elif result.timed_out:
                 status = EvidenceStatus.TIMED_OUT
