@@ -103,7 +103,14 @@ class RunRepository:
             for row in rows
         )
 
-    def transition_run(self, run_id: str, target_stage: RunStage, *, reason: str) -> Run:
+    def transition_run(
+        self,
+        run_id: str,
+        target_stage: RunStage,
+        *,
+        reason: str,
+        audit_events: tuple[tuple[str, dict[str, object]], ...] = (),
+    ) -> Run:
         current = self.get_run(run_id)
         timestamp = utc_now()
         status = current.status
@@ -136,6 +143,8 @@ class RunRepository:
                 )
                 if cursor.rowcount != 1:
                     raise RuntimeError("run changed concurrently; reload before transitioning")
+                for event_type, payload in audit_events:
+                    self._append_event(connection, run_id, event_type, payload, timestamp)
                 self._append_event(
                     connection, run_id, "stage_transitioned",
                     {"from_stage": current.stage.value, "reason": reason, "to_stage": target_stage.value},
