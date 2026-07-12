@@ -6,8 +6,10 @@ This file loads as project context when Hermes Agent starts in the Hardproof rep
 
 - **Hardproof** is a persistent, risk-aware engineering protocol for Hermes Agent.
 - **Current public release:** v0.2.0 Gatehouse (PyPI, GitHub)
-- **Current development boundary:** ready for v0.3.0 Workcells.
-- **Next planned product release:** v0.3.0 Workcells — **not started**
+- **Current development release:** v0.3.0 Workcells.
+- **Current phase:** blocked at the public Hermes child-session API feasibility gate.
+- **Workcells implementation:** not started beyond feasibility research on `codex/v0.3.0-workcells`.
+- **Next planned product release:** v0.4.0 Challenge Chamber — **not started**.
 - Hardproof is a standalone Hermes plugin discovered through the `hermes_agent.plugins` entry-point group.
 - It uses only public Hermes registration, hook, command, skill, and dispatch APIs.
 - The plugin remains opt-in. Hardproof does not modify Hermes core files.
@@ -262,10 +264,9 @@ python -m pytest tests/unit/test_domain_transitions.py tests/unit/test_stage_rul
 
 ## Task Boundaries
 
-- **Current maintenance task:** complete. Repository ready for v0.3.0.
-- **Next planned product release:** v0.3.0 Workcells
-- **Do not begin Workcells implementation during this maintenance pass.**
-- Do not change Hardproof protocol behavior unless a genuine P0 or P1 defect is discovered while validating documentation.
+- **Current development task:** v0.3.0 Workcells is blocked pending a required public Hermes child-session API.
+- **Next planned product release:** v0.4.0 Challenge Chamber — **not started**.
+- Do not begin v0.4.0 implementation during the v0.3.0 release program.
 
 ## Completion Report
 

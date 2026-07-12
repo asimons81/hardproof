@@ -5,7 +5,11 @@
 - Dependency PR review: complete
 - Open pull requests: zero
 - Main CI: all green
-- Next release: v0.3.0 Workcells -- not started
+- Current development release: v0.3.0 Workcells
+- Current phase: blocked at public Hermes child-session API feasibility gate
+- Workcells implementation: not started beyond specification feasibility research
+- Current branch: codex/v0.3.0-workcells
+- v0.4.0 Challenge Chamber: not started
 - Current version: 0.2.0
-- Repository readiness: ready
+- Repository readiness: NO-GO pending required public Hermes child-session API
 - Last updated: 2026-07-11
