@@ -4,7 +4,8 @@ Hardproof ships by evidence gates rather than dates.
 
 - v0.1.0 Core Heat establishes the standalone plugin, durable stages and profiles, local SQLite state, approvals, skills, context, mutation policy, fresh evidence, reports, and open-source foundation.
 - v0.2.0 Gatehouse adds explainable configurable policy, scoped waivers, risk suggestions, bounded stage graphs, migration diagnostics, and language policy packs. Released on GitHub and PyPI.
-- v0.3.0 (planned) Workcells adds dependency-aware task waves and resumable fresh implementer subagents.
+- v0.3.0 (released) Workcells adds dependency-aware task waves and resumable fresh implementer subagents.
+- v0.3.1 (prepared) Workcells Hardening fixes child handoff contract, transition gates, configuration enforcement, scope validation, retry surfaces, and task specification hardening.
 - v0.4.0 (planned) Challenge Chamber adds independent specialized reviewers, severity, fix/re-review loops, and review evidence packages.
 - v0.5.0 (planned) Isolation adds branches, worktrees, baseline proof, rollback, cleanup, and backend adapters.
 - v0.6.0 (planned) Tempering adds human-approved, provenance-linked learning proposals.

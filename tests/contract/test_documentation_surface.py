@@ -37,20 +37,20 @@ class TestAgentsFiles:
 class TestReadmeCurrentRelease:
     """README must correctly identify the current release."""
 
-    def test_readme_refers_to_v020(self) -> None:
+    def test_readme_refers_to_v030(self) -> None:
         readme = REPO_ROOT / "README.md"
         text = readme.read_text(encoding="utf-8")
-        assert "v0.2.0 Gatehouse" in text, "README must reference v0.2.0 as current release"
+        assert "v0.3.0 Workcells" in text, "README must reference v0.3.0 as current release"
 
-    def test_v030_qualified(self) -> None:
-        """v0.3.0 must be described as future work, not started."""
+    def test_v040_planned_not_started(self) -> None:
+        """v0.4.0 must be described as planned/not started."""
         readme = REPO_ROOT / "README.md"
         text = readme.read_text(encoding="utf-8")
-        idx = text.find("v0.3.0")
+        idx = text.find("v0.4.0")
         if idx >= 0:
             context = text[idx:idx + 120]
-            assert "not started" in context or "has not begun" in context or "planned" in context, (
-                f"v0.3.0 reference in README must say 'not started' or 'planned': {context}"
+            assert "not started" in context or "planned" in context or "has not begun" in context, (
+                f"v0.4.0 reference in README must say 'not started' or 'planned': {context}"
             )
 
 

@@ -9,8 +9,8 @@
 
 ## Version and Release Truth
 
-- v0.1.0, v0.1.1, and v0.2.0 are published. Do not write about them as if they are pending, unreleased, or in release-candidate status.
-- v0.3.0 has not started. Do not describe it as current work, in progress, or partially implemented.
+- v0.1.0, v0.1.1, v0.2.0, and v0.3.0 are published. Do not write about them as if they are pending, unreleased, or in release-candidate status.
+- v0.3.1 is prepared and pending release. v0.4.0 has not started.
 - Historical docs that reference a pre-release state for a now-published release should be updated at the top-level status line but the remainder of the document may remain if it is a faithful historical record.
 
 ## Link Conventions
