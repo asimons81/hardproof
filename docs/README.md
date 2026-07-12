@@ -35,6 +35,8 @@
 | [docs/configuration-and-migrations.md](configuration-and-migrations.md) | Policy configuration and migration |
 | [docs/policy-packs.md](policy-packs.md) | Built-in language policy packs |
 | [docs/specs/v0.2.0-gatehouse.md](../docs/specs/v0.2.0-gatehouse.md) | Gatehouse specification |
+| [docs/specs/v0.3.0-workcells.md](specs/v0.3.0-workcells.md) | Workcells specification |
+| [docs/research/hermes-child-session-api-v0.3.0.md](research/hermes-child-session-api-v0.3.0.md) | Public Hermes child-session compatibility research |
 
 ## Release Evidence
 
@@ -77,6 +79,12 @@
 | [docs/adr/0005-stage-aware-tool-policy.md](adr/0005-stage-aware-tool-policy.md) | Stage-aware tool policy |
 | [docs/adr/0006-ordered-policy-traces.md](adr/0006-ordered-policy-traces.md) | Ordered policy traces |
 | [docs/adr/0007-public-rebrand-hardproof.md](adr/0007-public-rebrand-hardproof.md) | Public rebrand to Hardproof |
+| [docs/adr/0008-workcell-task-attempt-state-machines.md](adr/0008-workcell-task-attempt-state-machines.md) | Workcell state machines |
+| [docs/adr/0009-shared-workspace-workcell-scheduling.md](adr/0009-shared-workspace-workcell-scheduling.md) | Shared-workspace scheduling |
+| [docs/adr/0010-workcell-child-result-validation.md](adr/0010-workcell-child-result-validation.md) | Child-result validation |
+| [docs/adr/0011-provider-neutral-workcell-model-tiers.md](adr/0011-provider-neutral-workcell-model-tiers.md) | Provider-neutral model tiers |
+| [docs/adr/0012-transactional-workcell-claims.md](adr/0012-transactional-workcell-claims.md) | Transactional claims |
+| [docs/adr/0013-workcell-interruption-recovery.md](adr/0013-workcell-interruption-recovery.md) | Interruption recovery |
 
 ## Historical Documents
 

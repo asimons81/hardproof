@@ -16,7 +16,7 @@ def test_version_metadata_matches_manifest() -> None:
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     manifest = yaml.safe_load((ROOT / "plugin.yaml").read_text(encoding="utf-8"))
     package = importlib.import_module("hardproof")
-    assert metadata["project"]["version"] == "0.2.0"
+    assert metadata["project"]["version"] == "0.3.0"
     assert metadata["project"]["version"] == manifest["version"] == package.__version__
 
 

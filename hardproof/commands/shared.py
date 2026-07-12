@@ -29,6 +29,8 @@ from hardproof.services.runs import RunService
 from hardproof.services.reports import ReportService
 from hardproof.services.risks import RiskService
 from hardproof.services.waivers import WaiverService
+from hardproof.services.workcells import WorkcellService, WorkcellTaskSpec
+from hardproof.services.hermes_children import HermesChildAdapter
 from hardproof.storage.database import Database, DatabaseCorruptionError
 from hardproof.storage.migrations import MigrationError, migrate
 from hardproof.storage.repository import RunRepository
@@ -245,6 +247,8 @@ class CommandService:
             "doctor": self._doctor, "runs": self._runs, "show": self._show,
             "config": self._config, "db": self._db, "complete": self._complete,
             "policy": self._policy, "migrate-state": self._migrate_state,
+            "tasks": self._workcell_tasks, "task": self._workcell_task,
+            "workcells": self._workcells,
         }
         if command not in handlers:
             raise ValueError(f"unknown Hardproof subcommand: {command}")
@@ -293,6 +297,143 @@ class CommandService:
             f"Status: {run.status.value}\nPending risk suggestions: {pending_risks}",
             run.id,
         )
+
+    def _workcell_tasks(self, rest: list[str]) -> CommandResult:
+        self._expect_no_args("tasks", rest)
+        run_id = self.active_run_id()
+        rows = self.repository.list_workcell_task_rows(run_id)
+        if not rows:
+            return CommandResult(True, "No Workcell tasks recorded.", run_id)
+        return CommandResult(
+            True,
+            "\n".join(
+                f"{row['task_key']} {row['status']} attempts={row['attempt_count']}/{row['maximum_attempts']} tier={row['model_tier']}"
+                for row in rows
+            ),
+            run_id,
+        )
+
+    def _workcell_task(self, rest: list[str]) -> CommandResult:
+        if not rest:
+            raise ValueError("usage: task <graph|show|attempts> [task-id]")
+        run_id = self.active_run_id()
+        action = rest[0]
+        rows = self.repository.list_workcell_task_rows(run_id)
+        if action == "graph" and len(rest) == 1:
+            return CommandResult(True, json.dumps(rows, sort_keys=True, indent=2, default=str), run_id)
+        if action == "show" and len(rest) == 2:
+            found = next((row for row in rows if row["id"] == rest[1] or row["task_key"] == rest[1]), None)
+            if found is None:
+                raise LookupError("Workcell task not found")
+            return CommandResult(True, json.dumps(found, sort_keys=True, indent=2, default=str), run_id)
+        if action == "attempts" and len(rest) == 2:
+            task = next((row for row in rows if row["id"] == rest[1] or row["task_key"] == rest[1]), None)
+            if task is None:
+                raise LookupError("Workcell task not found")
+            attempts = self.repository.list_workcell_attempts(str(task["id"]))
+            payload = [
+                {
+                    "id": item.attempt_id, "number": item.attempt_number, "state": item.state.value,
+                    "child_session_id": item.child_session_id, "model_tier": item.model_tier,
+                    "terminal_reason": item.terminal_reason,
+                }
+                for item in attempts
+            ]
+            return CommandResult(True, json.dumps(payload, sort_keys=True, indent=2), run_id)
+        raise ValueError("usage: task <graph|show|attempts> [task-id]")
+
+    def _workcells(self, rest: list[str]) -> CommandResult:
+        if not rest or rest[0] == "status":
+            if len(rest) > 1:
+                raise ValueError("usage: workcells <status|reconcile> [attempt-id]")
+            run_id = self.active_run_id()
+            rows = self.repository.list_workcell_task_rows(run_id)
+            counts: dict[str, int] = {}
+            for row in rows:
+                state = str(row["status"])
+                counts[state] = counts.get(state, 0) + 1
+            return CommandResult(True, json.dumps({"task_counts": counts}, sort_keys=True), run_id)
+        if rest[0] == "plan" and len(rest) == 3 and rest[1] == "--tasks-json":
+            raw = rest[2]
+            if len(raw) > 65_536:
+                raise ValueError("workcells plan tasks JSON exceeds 65536 characters")
+            try:
+                values = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                raise ValueError("workcells plan --tasks-json must be valid JSON") from exc
+            if not isinstance(values, list) or not values:
+                raise ValueError("workcells plan --tasks-json must be a non-empty array")
+            specs: list[WorkcellTaskSpec] = []
+            for value in values:
+                if not isinstance(value, dict):
+                    raise ValueError("every Workcell task specification must be an object")
+                required = {"key", "title", "objective", "acceptance"}
+                if not required <= set(value):
+                    raise ValueError("every Workcell task requires key, title, objective, and acceptance")
+                acceptance = value["acceptance"]
+                dependencies = value.get("dependencies", [])
+                read_scope = value.get("read_scope", [])
+                write_scope = value.get("write_scope", [])
+                for name, sequence in {
+                    "acceptance": acceptance, "dependencies": dependencies,
+                    "read_scope": read_scope, "write_scope": write_scope,
+                }.items():
+                    if not isinstance(sequence, list) or any(not isinstance(item, str) for item in sequence):
+                        raise ValueError(f"Workcell task {name} must be a list of strings")
+                specs.append(WorkcellTaskSpec(
+                    str(value["key"]), str(value["title"]), str(value["objective"]), tuple(acceptance),
+                    tuple(dependencies), bool(value.get("required", True)), tuple(read_scope), tuple(write_scope),
+                    int(value.get("priority", 0)), str(value["model_tier"]) if "model_tier" in value else None,
+                ))
+            config = load_config(self.paths.config).workcells
+            if not config.enabled:
+                raise PermissionError("Workcells are disabled by project configuration")
+            created = WorkcellService(
+                self.repository, maximum_attempts=config.maximum_attempts,
+                default_model_tier=config.default_model_tier,
+            ).create_graph(self.active_run_id(), tuple(specs))
+            return CommandResult(
+                True,
+                json.dumps({"graph_revision": created.revision, "waves": created.waves}, sort_keys=True),
+                self.active_run_id(),
+            )
+        if rest == ["run-next"]:
+            if self.context.hermes_context is None:
+                raise RuntimeError(
+                    "WORKCELL_CHILD_API_UNAVAILABLE: run-next requires an active public Hermes plugin context"
+                )
+            config = load_config(self.paths.config).workcells
+            if not config.enabled:
+                raise PermissionError("Workcells are disabled by project configuration")
+            launch = WorkcellService(
+                self.repository, maximum_attempts=config.maximum_attempts,
+                default_model_tier=config.default_model_tier, brief_size_limit=config.brief_size_limit,
+                context_manifest_size_limit=config.context_manifest_size_limit,
+                result_size_limit=config.result_size_limit,
+            ).launch_next(
+                self.active_run_id(), project_root=self.context.project_root,
+                adapter=HermesChildAdapter(self.context.hermes_context), claimant=self.context.actor,
+            )
+            if launch is None:
+                return CommandResult(True, "No ready Workcell task is available.", self.active_run_id())
+            return CommandResult(
+                True,
+                f"Workcell child launched: handle={launch.handle} child_session_id={launch.child_session_id or 'unreported'}.",
+                self.active_run_id(),
+            )
+        if rest[0] == "result" and len(rest) == 2:
+            config = load_config(self.paths.config).workcells
+            outcome = WorkcellService(
+                self.repository, maximum_attempts=config.maximum_attempts,
+                default_model_tier=config.default_model_tier, brief_size_limit=config.brief_size_limit,
+                context_manifest_size_limit=config.context_manifest_size_limit,
+                result_size_limit=config.result_size_limit,
+            ).process_result(rest[1], project_root=self.context.project_root, actor=self.context.actor)
+            return CommandResult(True, f"Workcell result accepted: {outcome}.", self.active_run_id())
+        if rest[0] == "reconcile" and len(rest) == 2:
+            attempt = self.repository.reconcile_workcell_attempt(rest[1], actor=self.context.actor)
+            return CommandResult(True, f"Workcell attempt {attempt.attempt_id}: {attempt.state.value}.", self.active_run_id())
+        raise ValueError("usage: workcells <status|plan --tasks-json JSON|run-next|result ATTEMPT|reconcile> [attempt-id]")
 
     def _approve(self, rest: list[str]) -> CommandResult:
         if not rest:
@@ -381,6 +522,10 @@ class CommandService:
             checks.append(("Stage graph", True, f"{len(graph.edges)} edges; VERIFY required"))
             checks.append(("Policy packs", True, ",".join(config.policy.packs or detected) or "none"))
             checks.append(("Immutable rules", True, "enabled"))
+            checks.append((
+                "Workcells", config.workcells.enabled,
+                f"tier={config.workcells.default_model_tier} active={config.workcells.maximum_active_children} recovery={config.workcells.recovery_behavior}",
+            ))
         except ConfigError as exc:
             checks.append(("Config", False, str(exc)))
         try:
@@ -439,6 +584,17 @@ class CommandService:
                 "stage_graph": graph.to_dict(),
                 "immutable_rules": "enabled",
                 "config_sha256": config_fingerprint(config),
+                "workcells": {
+                    "enabled": config.workcells.enabled,
+                    "maximum_attempts": config.workcells.maximum_attempts,
+                    "default_model_tier": config.workcells.default_model_tier,
+                    "model_selectors": config.workcells.model_selectors,
+                    "maximum_active_children": config.workcells.maximum_active_children,
+                    "allow_shared_workspace_concurrency": config.workcells.allow_shared_workspace_concurrency,
+                    "maximum_concurrent_mutating_tasks": config.workcells.maximum_concurrent_mutating_tasks,
+                    "claim_timeout_seconds": config.workcells.claim_timeout_seconds,
+                    "recovery_behavior": config.workcells.recovery_behavior,
+                },
             }
             return CommandResult(True, json.dumps(payload, sort_keys=True, indent=2))
         if rest[0] == "validate":

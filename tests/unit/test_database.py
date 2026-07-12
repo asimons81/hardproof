@@ -19,12 +19,28 @@ def test_database_enables_required_pragmas(tmp_path: Path) -> None:
 
 def test_migration_is_idempotent_and_reopenable(tmp_path: Path) -> None:
     database = Database(tmp_path / "hardproof.db")
-    assert migrate(database) == (1, 2)
+    assert migrate(database) == (1, 2, 3)
     assert migrate(database) == ()
     with database.connect() as connection:
         assert [row[0] for row in connection.execute(
             "SELECT version FROM schema_migrations"
-        ).fetchall()] == [1, 2]
+        ).fetchall()] == [1, 2, 3]
+
+
+def test_workcell_migration_creates_durable_lifecycle_tables(tmp_path: Path) -> None:
+    database = Database(tmp_path / "hardproof.db")
+    migrate(database)
+    with database.connect() as connection:
+        names = {
+            row[0] for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+    assert {
+        "workcell_graph_revisions", "workcell_tasks", "workcell_task_dependencies",
+        "workcell_attempts", "workcell_lifecycle_events", "workcell_claims",
+        "workcell_retry_decisions", "workcell_escalations",
+    } <= names
 
 
 def test_interrupted_migration_rolls_back(tmp_path: Path) -> None:

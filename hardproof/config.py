@@ -57,6 +57,23 @@ class PolicyConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class WorkcellsConfig:
+    enabled: bool
+    maximum_attempts: int
+    default_model_tier: str
+    profile_minimum_tiers: dict[RunProfile, str]
+    model_selectors: dict[str, str]
+    maximum_active_children: int
+    allow_shared_workspace_concurrency: bool
+    maximum_concurrent_mutating_tasks: int
+    brief_size_limit: int
+    context_manifest_size_limit: int
+    result_size_limit: int
+    claim_timeout_seconds: int
+    recovery_behavior: str
+
+
+@dataclass(frozen=True, slots=True)
 class HardproofConfig:
     schema_version: int
     source_schema_version: int
@@ -70,6 +87,7 @@ class HardproofConfig:
     maximum_stored_output_size: int
     mutating_tools: tuple[str, ...]
     policy: PolicyConfig
+    workcells: WorkcellsConfig
 
 
 DEFAULTS: dict[str, Any] = {
@@ -93,6 +111,21 @@ DEFAULTS: dict[str, Any] = {
         "packs": [],
         "stage_graph": {},
     },
+    "workcells": {
+        "enabled": True,
+        "maximum_attempts": 3,
+        "default_model_tier": "standard",
+        "profile_minimum_tiers": {"quick": "economy", "standard": "standard", "critical": "strong"},
+        "model_selectors": {"economy": "economy", "standard": "standard", "strong": "strong"},
+        "maximum_active_children": 1,
+        "allow_shared_workspace_concurrency": False,
+        "maximum_concurrent_mutating_tasks": 1,
+        "brief_size_limit": 65_536,
+        "context_manifest_size_limit": 32_768,
+        "result_size_limit": 65_536,
+        "claim_timeout_seconds": 900,
+        "recovery_behavior": "interrupt",
+    },
 }
 
 ALLOWED_KEYS = frozenset(DEFAULTS)
@@ -105,6 +138,13 @@ _RULE_KEYS = frozenset(
     {"key", "effect", "tools", "rationale", "command_regex", "path_glob", "profiles", "stages"}
 )
 _PACKS = frozenset({"python", "node", "rust", "go"})
+_WORKCELL_KEYS = frozenset({
+    "enabled", "maximum_attempts", "default_model_tier", "profile_minimum_tiers",
+    "model_selectors", "maximum_active_children", "allow_shared_workspace_concurrency",
+    "maximum_concurrent_mutating_tasks", "brief_size_limit", "context_manifest_size_limit",
+    "result_size_limit", "claim_timeout_seconds", "recovery_behavior",
+})
+_MODEL_TIERS = frozenset({"economy", "standard", "strong"})
 
 
 def _expand_path(value: Any) -> Path:
@@ -217,6 +257,61 @@ def _policy(value: Any, default_profile: RunProfile) -> PolicyConfig:
     return PolicyConfig(mode, rules, packs, dict(stage_graph))
 
 
+def _workcells(value: Any) -> WorkcellsConfig:
+    if not isinstance(value, dict):
+        raise ConfigError("workcells must be a mapping")
+    unknown = sorted(set(value) - _WORKCELL_KEYS)
+    if unknown:
+        raise ConfigError(f"workcells has unknown keys: {', '.join(unknown)}")
+    merged = {**DEFAULTS["workcells"], **value}
+    enabled = merged["enabled"]
+    if not isinstance(enabled, bool):
+        raise ConfigError("workcells.enabled must be boolean")
+    maximum_attempts = merged["maximum_attempts"]
+    if not isinstance(maximum_attempts, int) or isinstance(maximum_attempts, bool) or not 1 <= maximum_attempts <= 10:
+        raise ConfigError("workcells.maximum_attempts must be between 1 and 10")
+    tier = merged["default_model_tier"]
+    if tier not in _MODEL_TIERS:
+        raise ConfigError("workcells.default_model_tier must be a known tier")
+    selectors = merged["model_selectors"]
+    if not isinstance(selectors, dict) or set(selectors) != _MODEL_TIERS or any(
+        not isinstance(item, str) or not item.strip() or len(item) > 128 for item in selectors.values()
+    ):
+        raise ConfigError("workcells.model_selectors must map every tier to a non-empty selector")
+    minima = merged["profile_minimum_tiers"]
+    if not isinstance(minima, dict) or set(minima) != {item.value for item in RunProfile} or any(
+        item not in _MODEL_TIERS for item in minima.values()
+    ):
+        raise ConfigError("workcells.profile_minimum_tiers must map every profile to a known tier")
+    active = merged["maximum_active_children"]
+    mutating = merged["maximum_concurrent_mutating_tasks"]
+    shared = merged["allow_shared_workspace_concurrency"]
+    if not isinstance(active, int) or isinstance(active, bool) or not 1 <= active <= 4:
+        raise ConfigError("workcells.maximum_active_children must be between 1 and 4")
+    if not isinstance(shared, bool) or not isinstance(mutating, int) or isinstance(mutating, bool) or not 1 <= mutating <= active:
+        raise ConfigError("workcells concurrency configuration is invalid")
+    if not shared and mutating != 1:
+        raise ConfigError("workcells concurrency requires allow_shared_workspace_concurrency")
+    limits = ("brief_size_limit", "context_manifest_size_limit", "result_size_limit")
+    for name in limits:
+        limit = merged[name]
+        if not isinstance(limit, int) or isinstance(limit, bool) or not 1_024 <= limit <= 1_048_576:
+            raise ConfigError(f"workcells.{name} must be between 1024 and 1048576")
+    timeout = merged["claim_timeout_seconds"]
+    if not isinstance(timeout, int) or isinstance(timeout, bool) or not 60 <= timeout <= 86_400:
+        raise ConfigError("workcells.claim_timeout_seconds must be between 60 and 86400")
+    recovery = merged["recovery_behavior"]
+    if recovery != "interrupt":
+        raise ConfigError("workcells.recovery_behavior must be interrupt")
+    return WorkcellsConfig(
+        enabled, maximum_attempts, str(tier),
+        {RunProfile(key): str(item) for key, item in minima.items()},
+        {str(key): str(item) for key, item in selectors.items()}, active, shared, mutating,
+        int(merged["brief_size_limit"]), int(merged["context_manifest_size_limit"]),
+        int(merged["result_size_limit"]), timeout, recovery,
+    )
+
+
 def config_fingerprint(config: HardproofConfig) -> str:
     """Hash the effective, validated configuration for durable policy evidence."""
     payload = {
@@ -251,6 +346,21 @@ def config_fingerprint(config: HardproofConfig) -> str:
             "packs": config.policy.packs,
             "stage_graph": config.policy.stage_graph,
         },
+        "workcells": {
+            "enabled": config.workcells.enabled,
+            "maximum_attempts": config.workcells.maximum_attempts,
+            "default_model_tier": config.workcells.default_model_tier,
+            "profile_minimum_tiers": {key.value: value for key, value in config.workcells.profile_minimum_tiers.items()},
+            "model_selectors": config.workcells.model_selectors,
+            "maximum_active_children": config.workcells.maximum_active_children,
+            "allow_shared_workspace_concurrency": config.workcells.allow_shared_workspace_concurrency,
+            "maximum_concurrent_mutating_tasks": config.workcells.maximum_concurrent_mutating_tasks,
+            "brief_size_limit": config.workcells.brief_size_limit,
+            "context_manifest_size_limit": config.workcells.context_manifest_size_limit,
+            "result_size_limit": config.workcells.result_size_limit,
+            "claim_timeout_seconds": config.workcells.claim_timeout_seconds,
+            "recovery_behavior": config.workcells.recovery_behavior,
+        },
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
@@ -271,10 +381,12 @@ def load_config(path: str | Path) -> HardproofConfig:
             raise ConfigError("YAML config root must be a mapping")
         supplied = loaded
     source_schema = supplied.get("schema_version", CONFIG_SCHEMA_VERSION)
-    if not isinstance(source_schema, int) or isinstance(source_schema, bool) or source_schema not in {1, 2}:
+    if not isinstance(source_schema, int) or isinstance(source_schema, bool) or source_schema not in {1, 2, 3}:
         raise ConfigError(f"unsupported config schema_version: {source_schema}")
     if source_schema == 1 and "policy" in supplied:
         raise ConfigError("config schema_version 1 does not support policy; use schema_version 2")
+    if source_schema < 3 and "workcells" in supplied:
+        raise ConfigError("config schema_version 1 or 2 does not support workcells; use schema_version 3")
     unknown = sorted(set(supplied) - ALLOWED_KEYS)
     if unknown:
         raise ConfigError(f"unknown config keys: {', '.join(unknown)}")
@@ -318,4 +430,5 @@ def load_config(path: str | Path) -> HardproofConfig:
         maximum_stored_output_size=maximum,
         mutating_tools=_string_tuple("mutating_tools", values["mutating_tools"]),
         policy=_policy(values["policy"], profile),
+        workcells=_workcells(values["workcells"]),
     )

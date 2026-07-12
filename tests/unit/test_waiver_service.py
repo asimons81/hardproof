@@ -114,3 +114,119 @@ def test_lifecycle_rationales_are_redacted_before_storage(tmp_path: Path) -> Non
     )
     assert "also-never-store" not in str(revoked.to_dict())
     assert "never-store" not in str(commands.repository.list_waiver_events(waiver.id))
+
+
+def test_waiver_matching_rejects_mismatched_rule_key(tmp_path: Path) -> None:
+    """Covers _matches line 40: waiver.rule_key != scope.rule_key"""
+    commands = commands_at(tmp_path)
+    service = WaiverService(commands.repository)
+    waiver = service.create_human(
+        run_id=commands.active_run_id(), name="match-key",
+        rule_key="project.my_rule", rationale="testing",
+        actor="person", source="cli", created_at=NOW, expires_at=LATER,
+    )
+    scope = WaiverScope(
+        "project.different_rule", None, None, None,
+        RunProfile.QUICK, RunStage.INTAKE, waiver.run_id, NOW,
+    )
+    assert match_waiver((waiver,), scope) is None
+
+
+def test_waiver_matching_rejects_protected_scope(tmp_path: Path) -> None:
+    """Covers _matches line 40: is_protected_rule(scope.rule_key)"""
+    commands = commands_at(tmp_path)
+    service = WaiverService(commands.repository)
+    waiver = service.create_human(
+        run_id=commands.active_run_id(), name="match-protected",
+        rule_key="project.some_rule", rationale="testing",
+        actor="person", source="cli", created_at=NOW, expires_at=LATER,
+    )
+    scope = WaiverScope(
+        "terminal.immutable.force_push", None, None, None,
+        RunProfile.QUICK, RunStage.INTAKE, waiver.run_id, NOW,
+    )
+    assert match_waiver((waiver,), scope) is None
+
+
+def test_waiver_matching_rejects_mismatched_run_id(tmp_path: Path) -> None:
+    """Covers _matches line 46: waiver.run_id mismatch"""
+    commands = commands_at(tmp_path)
+    service = WaiverService(commands.repository)
+    waiver = service.create_human(
+        run_id=commands.active_run_id(), name="match-run",
+        rule_key="project.my_rule", rationale="testing",
+        actor="person", source="cli", created_at=NOW, expires_at=LATER,
+    )
+    scope = WaiverScope(
+        waiver.rule_key, None, None, None,
+        RunProfile.QUICK, RunStage.INTAKE, "different-run-id", NOW,
+    )
+    assert match_waiver((waiver,), scope) is None
+
+
+def test_waiver_matching_rejects_mismatched_tool_name(tmp_path: Path) -> None:
+    """Covers _matches line 48: waiver.tool_name mismatch"""
+    commands = commands_at(tmp_path)
+    service = WaiverService(commands.repository)
+    waiver = service.create_human(
+        run_id=commands.active_run_id(), name="match-tool",
+        rule_key="project.my_rule", rationale="testing",
+        actor="person", source="cli", created_at=NOW, expires_at=LATER,
+        tool_name="write_file",
+    )
+    scope = WaiverScope(
+        waiver.rule_key, "patch", None, None,
+        RunProfile.QUICK, RunStage.INTAKE, waiver.run_id, NOW,
+    )
+    assert match_waiver((waiver,), scope) is None
+
+
+def test_waiver_matching_rejects_mismatched_command_sha256(tmp_path: Path) -> None:
+    """Covers _matches line 50: waiver.command_sha256 mismatch"""
+    commands = commands_at(tmp_path)
+    service = WaiverService(commands.repository)
+    waiver = service.create_human(
+        run_id=commands.active_run_id(), name="match-sha",
+        rule_key="project.my_rule", rationale="testing",
+        actor="person", source="cli", created_at=NOW, expires_at=LATER,
+        command_sha256="a" * 64,
+    )
+    scope = WaiverScope(
+        waiver.rule_key, None, "b" * 64, None,
+        RunProfile.QUICK, RunStage.INTAKE, waiver.run_id, NOW,
+    )
+    assert match_waiver((waiver,), scope) is None
+
+
+def test_waiver_matching_rejects_mismatched_profile(tmp_path: Path) -> None:
+    """Covers _matches line 56: waiver.profile mismatch"""
+    commands = commands_at(tmp_path)
+    service = WaiverService(commands.repository)
+    waiver = service.create_human(
+        run_id=commands.active_run_id(), name="match-profile",
+        rule_key="project.my_rule", rationale="testing",
+        actor="person", source="cli", created_at=NOW, expires_at=LATER,
+        profile=RunProfile.STANDARD,
+    )
+    scope = WaiverScope(
+        waiver.rule_key, None, None, None,
+        RunProfile.CRITICAL, RunStage.INTAKE, waiver.run_id, NOW,
+    )
+    assert match_waiver((waiver,), scope) is None
+
+
+def test_waiver_matching_rejects_mismatched_stage(tmp_path: Path) -> None:
+    """Covers _matches line 58: waiver.stage mismatch"""
+    commands = commands_at(tmp_path)
+    service = WaiverService(commands.repository)
+    waiver = service.create_human(
+        run_id=commands.active_run_id(), name="match-stage",
+        rule_key="project.my_rule", rationale="testing",
+        actor="person", source="cli", created_at=NOW, expires_at=LATER,
+        stage=RunStage.DESIGN,
+    )
+    scope = WaiverScope(
+        waiver.rule_key, None, None, None,
+        RunProfile.QUICK, RunStage.IMPLEMENT, waiver.run_id, NOW,
+    )
+    assert match_waiver((waiver,), scope) is None

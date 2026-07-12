@@ -44,7 +44,7 @@ def test_v1_database_upgrades_without_losing_run_or_evidence(tmp_path: Path) -> 
     )
     repository.add_evidence(evidence)
 
-    assert migrate(database) == (2,)
+    assert migrate(database) == (2, 3)
     assert repository.get_run(run.id) == run
     assert repository.list_evidence(run.id) == (evidence,)
     assert migrate(database) == ()
