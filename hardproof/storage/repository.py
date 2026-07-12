@@ -281,7 +281,8 @@ class RunRepository:
             raise LookupError(f"task not found: {task.task_key}")
 
     def create_workcell_graph_revision(
-        self, run_id: str, revision: int, graph_sha256: str, *, actor: str, rationale: str
+        self, run_id: str, revision: int, graph_sha256: str, *, actor: str, rationale: str,
+        approved_plan_artifact_id: str | None = None, approved_plan_sha256: str | None = None,
     ) -> str:
         if revision < 1 or len(graph_sha256) != 64 or not actor.strip() or not rationale.strip():
             raise ValueError("invalid Workcell graph revision")
@@ -291,10 +292,20 @@ class RunRepository:
                 """INSERT INTO workcell_graph_revisions(
                     id, run_id, revision, approved_plan_artifact_id, approved_plan_sha256,
                     graph_sha256, created_at, created_by, rationale
-                ) VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?)""",
-                (graph_id, run_id, revision, graph_sha256, utc_now(), actor, rationale),
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    graph_id, run_id, revision, approved_plan_artifact_id, approved_plan_sha256,
+                    graph_sha256, utc_now(), actor, rationale,
+                ),
             )
         return graph_id
+
+    def next_workcell_graph_revision(self, run_id: str) -> int:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT COALESCE(MAX(revision), 0) FROM workcell_graph_revisions WHERE run_id=?", (run_id,)
+            ).fetchone()
+        return int(row[0]) + 1
 
     def add_workcell_task(
         self, task: WorkcellTask, graph_revision_id: str, *, maximum_attempts: int, model_tier: str
@@ -317,6 +328,27 @@ class RunRepository:
                     task.state.value, timestamp, timestamp,
                 ),
             )
+
+    def add_workcell_dependency(
+        self, task_id: str, dependency_task_id: str, *, required: bool = True
+    ) -> None:
+        with self.database.connect() as connection:
+            connection.execute(
+                """INSERT INTO workcell_task_dependencies(task_id, dependency_task_id, required, created_at)
+                VALUES (?, ?, ?, ?)""",
+                (task_id, dependency_task_id, int(required), utc_now()),
+            )
+
+    def set_workcell_wave(self, task_id: str, wave_number: int) -> None:
+        if wave_number < 1:
+            raise ValueError("Workcell wave number must be positive")
+        with self.database.connect() as connection:
+            cursor = connection.execute(
+                "UPDATE workcell_tasks SET wave_number=?, updated_at=? WHERE id=?",
+                (wave_number, utc_now(), task_id),
+            )
+        if cursor.rowcount != 1:
+            raise LookupError("Workcell task not found")
 
     def claim_workcell_task(
         self,
@@ -610,7 +642,7 @@ class RunRepository:
             rows = connection.execute(
                 """SELECT id, task_key, title, status, wave_number, priority, model_tier,
                 maximum_attempts, attempt_count, blocking_reason, escalation_state
-                FROM workcell_tasks WHERE run_id=? ORDER BY priority, task_key""",
+                FROM workcell_tasks WHERE run_id=? ORDER BY wave_number, priority, task_key""",
                 (run_id,),
             ).fetchall()
         return tuple({str(key): row[key] for key in row.keys()} for row in rows)
