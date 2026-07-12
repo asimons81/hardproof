@@ -206,3 +206,27 @@ def test_unlisted_transitions_are_rejected() -> None:
             continue
         if (source, target) not in forward:
             assert not evaluate_transition(run_at(source), target, TransitionFacts()).allowed
+
+
+def test_required_workcell_blocks_implement_to_review() -> None:
+    """P0-2 regression: required Workcells must block IMPLEMENT -> REVIEW until resolved."""
+    # Blocked when required Workcells are unresolved
+    blocked = evaluate_transition(
+        run_at(RunStage.IMPLEMENT), RunStage.REVIEW,
+        TransitionFacts(recorded_change=True, workcell_required_unresolved=1),
+    )
+    assert "required Workcells are unresolved" in blocked.blockers[0]
+
+    # Allowed when all required Workcells are completed
+    allowed = evaluate_transition(
+        run_at(RunStage.IMPLEMENT), RunStage.REVIEW,
+        TransitionFacts(recorded_change=True, workcell_required_unresolved=0),
+    )
+    assert allowed.allowed
+
+    # Allowed when there are no Workcells (default)
+    default = evaluate_transition(
+        run_at(RunStage.IMPLEMENT), RunStage.REVIEW,
+        TransitionFacts(recorded_change=True),
+    )
+    assert default.allowed

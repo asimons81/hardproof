@@ -26,6 +26,7 @@ class TransitionFacts:
     approved_review: bool = False
     recorded_change: bool = False
     learning_skipped: bool = False
+    workcell_required_unresolved: int = 0
 
     def has_artifact(self, kind: ArtifactKind) -> bool:
         return any(item.kind is kind for item in self.artifacts)
@@ -60,6 +61,8 @@ def _gate_for_forward(run: Run, target: RunStage, facts: TransitionFacts) -> lis
     elif run.stage is RunStage.IMPLEMENT and target is RunStage.REVIEW:
         if not facts.recorded_change and not any(task.status is TaskStatus.COMPLETED for task in facts.tasks):
             blockers.append("completed task or recorded change missing")
+        if facts.workcell_required_unresolved > 0:
+            blockers.append(f"required Workcells are unresolved: {facts.workcell_required_unresolved} task(s) not completed")
     elif run.stage is RunStage.REVIEW and target is RunStage.VERIFY:
         if run.profile is not RunProfile.QUICK and not (
             facts.approved_review or facts.has_human_approval(ApprovalGate.WAIVER)

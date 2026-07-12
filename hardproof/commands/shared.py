@@ -17,7 +17,7 @@ from uuid import uuid4
 import yaml
 
 from hardproof.compat import inspect_context
-from hardproof.config import DEFAULTS, ConfigError, config_fingerprint, load_config
+from hardproof.config import DEFAULTS, ConfigError, config_fingerprint, load_config, _MODEL_TIERS
 from hardproof.domain.enums import ApprovalGate, RiskLevel, RunProfile, RunStage
 from hardproof.domain.models import Run, SessionBinding, VerificationCheck, new_id, utc_now
 from hardproof.paths import ProjectPaths
@@ -142,6 +142,7 @@ class CommandService:
             approved_review=any(event.event_type == "review_approved" for event in events),
             recorded_change=any(event.event_type == "change_recorded" for event in events),
             learning_skipped=any(event.event_type == "learning_skipped" for event in events),
+            workcell_required_unresolved=self.repository.count_unresolved_required_workcells(run_id),
         )
 
     def transition_facts(self, run_id: str) -> TransitionFacts:
@@ -370,27 +371,76 @@ class CommandService:
                 required = {"key", "title", "objective", "acceptance"}
                 if not required <= set(value):
                     raise ValueError("every Workcell task requires key, title, objective, and acceptance")
+                unknown = sorted(set(value) - required - {
+                    "dependencies", "read_scope", "write_scope", "required", "priority", "model_tier",
+                })
+                if unknown:
+                    raise ValueError(f"unknown Workcell task keys: {', '.join(unknown)}")
+                key = str(value["key"])
+                if not key or len(key) > 128 or not key.replace("-", "").replace("_", "").isalnum():
+                    raise ValueError("Workcell task key must be 1-128 filename-safe characters")
+                title = str(value["title"])
+                if not title.strip() or len(title) > 256:
+                    raise ValueError("Workcell task title must be 1-256 characters")
+                objective = str(value["objective"])
+                if not objective.strip() or len(objective) > 4096:
+                    raise ValueError("Workcell task objective must be 1-4096 characters")
                 acceptance = value["acceptance"]
+                if not isinstance(acceptance, list) or not acceptance or len(acceptance) > 32:
+                    raise ValueError("Workcell task acceptance must be a non-empty list of at most 32 strings")
+                for item in acceptance:
+                    if not isinstance(item, str) or not item.strip() or len(item) > 512:
+                        raise ValueError("Workcell task acceptance items must be 1-512 character strings")
                 dependencies = value.get("dependencies", [])
+                if not isinstance(dependencies, list) or len(dependencies) > 32:
+                    raise ValueError("Workcell task dependencies must be a list of at most 32 strings")
+                for item in dependencies:
+                    if not isinstance(item, str) or not item.strip():
+                        raise ValueError("Workcell task dependencies must be non-empty strings")
                 read_scope = value.get("read_scope", [])
                 write_scope = value.get("write_scope", [])
-                for name, sequence in {
-                    "acceptance": acceptance, "dependencies": dependencies,
-                    "read_scope": read_scope, "write_scope": write_scope,
-                }.items():
-                    if not isinstance(sequence, list) or any(not isinstance(item, str) for item in sequence):
-                        raise ValueError(f"Workcell task {name} must be a list of strings")
+                for name, scope in [("read_scope", read_scope), ("write_scope", write_scope)]:
+                    if not isinstance(scope, list) or len(scope) > 32:
+                        raise ValueError(f"Workcell task {name} must be a list of at most 32 strings")
+                    for item in scope:
+                        if not isinstance(item, str) or not item.strip():
+                            raise ValueError(f"Workcell task {name} items must be non-empty strings")
+                        if item.startswith("/") or ".." in item.split("/"):
+                            raise ValueError(f"Workcell task {name} path must be project-relative without traversal: {item}")
+                req_bool = value.get("required", True)
+                if not isinstance(req_bool, bool):
+                    raise ValueError("Workcell task required must be boolean")
+                priority = value.get("priority", 0)
+                if not isinstance(priority, int) or isinstance(priority, bool) or not -128 <= priority <= 127:
+                    raise ValueError("Workcell task priority must be an integer between -128 and 127")
+                model_tier = value.get("model_tier")
+                if model_tier is not None:
+                    if not isinstance(model_tier, str) or model_tier not in _MODEL_TIERS:
+                        raise ValueError(f"Workcell task model_tier must be one of {sorted(_MODEL_TIERS)}")
                 specs.append(WorkcellTaskSpec(
                     str(value["key"]), str(value["title"]), str(value["objective"]), tuple(acceptance),
-                    tuple(dependencies), bool(value.get("required", True)), tuple(read_scope), tuple(write_scope),
-                    int(value.get("priority", 0)), str(value["model_tier"]) if "model_tier" in value else None,
+                    tuple(dependencies), req_bool, tuple(read_scope), tuple(write_scope),
+                    priority, model_tier,
                 ))
             config = load_config(self.paths.config).workcells
             if not config.enabled:
                 raise PermissionError("Workcells are disabled by project configuration")
+            run_id = self.active_run_id()
+            active_run = self.repository.get_run(run_id)
+            if active_run.profile is RunProfile.QUICK and len(specs) > 3:
+                raise ValueError("Quick profile Workcell graphs are limited to at most 3 tasks")
+            # Validate profile minimum tier for every task
+            minimum = config.profile_minimum_tiers.get(active_run.profile, config.default_model_tier)
+            for spec in specs:
+                tier = spec.model_tier or config.default_model_tier
+                tier_index = {t: i for i, t in enumerate(sorted(_MODEL_TIERS))}
+                if tier_index.get(tier, -1) < tier_index.get(minimum, 0):
+                    raise ValueError(f"Workcell task {spec.key} model tier {tier} is below profile minimum {minimum}")
             created = WorkcellService(
                 self.repository, maximum_attempts=config.maximum_attempts,
                 default_model_tier=config.default_model_tier,
+                claim_timeout_seconds=config.claim_timeout_seconds,
+                maximum_active_children=config.maximum_active_children,
             ).create_graph(self.active_run_id(), tuple(specs))
             return CommandResult(
                 True,
@@ -410,6 +460,8 @@ class CommandService:
                 default_model_tier=config.default_model_tier, brief_size_limit=config.brief_size_limit,
                 context_manifest_size_limit=config.context_manifest_size_limit,
                 result_size_limit=config.result_size_limit,
+                claim_timeout_seconds=config.claim_timeout_seconds,
+                maximum_active_children=config.maximum_active_children,
             ).launch_next(
                 self.active_run_id(), project_root=self.context.project_root,
                 adapter=HermesChildAdapter(self.context.hermes_context), claimant=self.context.actor,
@@ -428,12 +480,43 @@ class CommandService:
                 default_model_tier=config.default_model_tier, brief_size_limit=config.brief_size_limit,
                 context_manifest_size_limit=config.context_manifest_size_limit,
                 result_size_limit=config.result_size_limit,
+                claim_timeout_seconds=config.claim_timeout_seconds,
+                maximum_active_children=config.maximum_active_children,
             ).process_result(rest[1], project_root=self.context.project_root, actor=self.context.actor)
             return CommandResult(True, f"Workcell result accepted: {outcome}.", self.active_run_id())
         if rest[0] == "reconcile" and len(rest) == 2:
             attempt = self.repository.reconcile_workcell_attempt(rest[1], actor=self.context.actor)
             return CommandResult(True, f"Workcell attempt {attempt.attempt_id}: {attempt.state.value}.", self.active_run_id())
-        raise ValueError("usage: workcells <status|plan --tasks-json JSON|run-next|result ATTEMPT|reconcile> [attempt-id]")
+        if rest[0] == "retry" and len(rest) >= 3:
+            task_id_or_key = rest[1]
+            reason = " ".join(rest[2:])
+            run_id = self.active_run_id()
+            run = self.repository.get_run(run_id)
+            if run.stage not in (RunStage.IMPLEMENT, RunStage.REVIEW):
+                raise PermissionError("Workcell retry requires IMPLEMENT or REVIEW stage")
+            rows = self.repository.list_workcell_task_rows(run_id)
+            task = next(
+                (row for row in rows if row["id"] == task_id_or_key or row["task_key"] == task_id_or_key),
+                None,
+            )
+            if task is None:
+                raise LookupError("Workcell task not found")
+            prior_attempts = self.repository.list_workcell_attempts(str(task["id"]))
+            if not prior_attempts:
+                raise ValueError("Workcell task has no attempts to retry")
+            latest = prior_attempts[-1]
+            if latest.state.value not in {"blocked", "failed", "interrupted", "cancelled"}:
+                raise ValueError("Workcell task's latest attempt cannot be retried")
+            decision_id = self.repository.authorize_workcell_retry(
+                str(task["id"]), latest.attempt_id, actor=self.context.actor,
+                reason=reason, material_change="human-authorized retry",
+                new_context_sha256=latest.context_sha256, new_model_tier=str(task["model_tier"]),
+            )
+            return CommandResult(True, f"Workcell retry authorized: {decision_id}.", run_id)
+        raise ValueError(
+            "usage: workcells <status|plan --tasks-json JSON|run-next|result ATTEMPT|"
+            "reconcile ATTEMPT|retry TASK REASON...>"
+        )
 
     def _approve(self, rest: list[str]) -> CommandResult:
         if not rest:
