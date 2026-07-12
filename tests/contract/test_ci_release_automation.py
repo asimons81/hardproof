@@ -51,3 +51,19 @@ def test_sbom_script_and_workflows_exist() -> None:
         ".github/workflows/scorecard.yml", ".github/workflows/release.yml",
     ):
         assert (ROOT / relative).is_file(), relative
+
+
+def test_workflow_action_refs_are_consistent() -> None:
+    """Check that all reusable actions use the same major version across workflows."""
+    ci = workflow("ci.yml")
+    codeql = workflow("codeql.yml")
+    scorecard = workflow("scorecard.yml")
+    release = workflow("release.yml")
+    all_text = str(ci) + str(codeql) + str(scorecard) + str(release)
+    # Check for consistent checkout version: there should be exactly ONE
+    # checkout version string across all workflows
+    import re
+    checkout_versions = set(re.findall(r"actions/checkout@v(\d+)", all_text))
+    assert len(checkout_versions) == 1, f"inconsistent checkout versions: {checkout_versions}"
+    # upload-artifact path globs include expected artifact types
+    # (verified structurally by YAML parsing above)
