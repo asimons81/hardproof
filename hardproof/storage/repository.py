@@ -25,7 +25,7 @@ from hardproof.domain.models import (
     utc_now,
 )
 from hardproof.domain.enums import RiskLevel, RunStage, RunStatus
-from hardproof.domain.workcells import AttemptState, WorkcellAttempt, WorkcellTask
+from hardproof.domain.workcells import AttemptState, TaskState, WorkcellAttempt, WorkcellTask
 from hardproof.storage.database import Database
 
 
@@ -405,6 +405,114 @@ class RunRepository:
             )
             for row in rows
         )
+
+    def _get_workcell_attempt(self, attempt_id: str) -> WorkcellAttempt:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM workcell_attempts WHERE id=?", (attempt_id,)
+            ).fetchone()
+        if row is None:
+            raise LookupError("Workcell attempt not found")
+        return WorkcellAttempt(
+            str(row["id"]), str(row["run_id"]), str(row["task_id"]), int(row["attempt_number"]),
+            str(row["launch_token"]), str(row["model_tier"]), str(row["context_sha256"]),
+            AttemptState(str(row["state"])), row["child_session_id"], row["terminal_reason"],
+        )
+
+    def mark_workcell_attempt_running(
+        self, attempt_id: str, *, child_session_id: str | None, child_handle: dict[str, object]
+    ) -> WorkcellAttempt:
+        """Record a public child launch before any result can be authoritative."""
+        timestamp = utc_now()
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute(
+                    "SELECT * FROM workcell_attempts WHERE id=?", (attempt_id,)
+                ).fetchone()
+                if row is None:
+                    raise LookupError("Workcell attempt not found")
+                if row["state"] != AttemptState.STARTING.value:
+                    raise ValueError("Workcell attempt is not awaiting launch")
+                cursor = connection.execute(
+                    """UPDATE workcell_attempts SET state='running', child_session_id=?,
+                    child_handle_json=?, started_at=?, updated_at=? WHERE id=? AND state='starting'""",
+                    (child_session_id, json.dumps(child_handle, sort_keys=True), timestamp, timestamp, attempt_id),
+                )
+                if cursor.rowcount != 1:
+                    raise RuntimeError("Workcell attempt changed concurrently")
+                connection.execute(
+                    "UPDATE workcell_tasks SET status='running', updated_at=? WHERE id=?",
+                    (timestamp, row["task_id"]),
+                )
+                connection.execute(
+                    """INSERT INTO workcell_lifecycle_events(
+                        run_id, task_id, attempt_id, event_type, actor, child_session_id,
+                        previous_state, new_state, details_json, correlation_id, created_at
+                    ) VALUES (?, ?, ?, 'child_started', 'parent', ?, 'starting', 'running', ?, ?, ?)""",
+                    (
+                        row["run_id"], row["task_id"], attempt_id, child_session_id,
+                        json.dumps(child_handle, sort_keys=True), row["launch_token"], timestamp,
+                    ),
+                )
+            except Exception:
+                connection.rollback()
+                raise
+            else:
+                connection.commit()
+        return self._get_workcell_attempt(attempt_id)
+
+    def close_workcell_attempt(
+        self, attempt_id: str, *, outcome: str, actor: str, reason: str
+    ) -> WorkcellAttempt:
+        """Close an active attempt atomically after parent-side validation."""
+        target = AttemptState(outcome)
+        if target not in {
+            AttemptState.SUCCEEDED, AttemptState.BLOCKED, AttemptState.FAILED,
+            AttemptState.INTERRUPTED, AttemptState.CANCELLED,
+        } or not actor.strip() or not reason.strip():
+            raise ValueError("invalid Workcell attempt closure")
+        timestamp = utc_now()
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute(
+                    "SELECT * FROM workcell_attempts WHERE id=?", (attempt_id,)
+                ).fetchone()
+                if row is None:
+                    raise LookupError("Workcell attempt not found")
+                if row["state"] not in {AttemptState.STARTING.value, AttemptState.RUNNING.value}:
+                    raise ValueError("terminal Workcell attempt is immutable")
+                cursor = connection.execute(
+                    """UPDATE workcell_attempts SET state=?, ended_at=?, updated_at=?, terminal_reason=?
+                    WHERE id=? AND state IN ('starting', 'running')""",
+                    (target.value, timestamp, timestamp, reason, attempt_id),
+                )
+                if cursor.rowcount != 1:
+                    raise RuntimeError("Workcell attempt changed concurrently")
+                task_state = TaskState(target.value).value
+                connection.execute(
+                    "UPDATE workcell_tasks SET status=?, updated_at=?, blocking_reason=? WHERE id=?",
+                    (task_state, timestamp, None if target is AttemptState.SUCCEEDED else reason, row["task_id"]),
+                )
+                connection.execute("DELETE FROM workcell_claims WHERE attempt_id=?", (attempt_id,))
+                connection.execute(
+                    """INSERT INTO workcell_lifecycle_events(
+                        run_id, task_id, attempt_id, event_type, actor, child_session_id,
+                        previous_state, new_state, details_json, correlation_id, created_at
+                    ) VALUES (?, ?, ?, 'attempt_closed', ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        row["run_id"], row["task_id"], attempt_id, actor, row["child_session_id"],
+                        row["state"], target.value, json.dumps({"reason": reason}, sort_keys=True),
+                        row["launch_token"], timestamp,
+                    ),
+                )
+            except Exception:
+                connection.rollback()
+                raise
+            else:
+                connection.commit()
+        return self._get_workcell_attempt(attempt_id)
 
     def add_verification_check(self, check: VerificationCheck) -> None:
         with self.database.connect() as connection:

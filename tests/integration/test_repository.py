@@ -140,3 +140,17 @@ def test_workcell_claim_is_transactional_and_has_one_winner(tmp_path: Path) -> N
     results = [future.result() if future.exception() is None else None for future in futures]
     assert len([result for result in results if result is not None]) == 1
     assert len(repository.list_workcell_attempts(task.task_id)) == 1
+
+
+def test_workcell_lifecycle_transitions_are_parent_authoritative(tmp_path: Path) -> None:
+    repository = repository_at(tmp_path / "hardproof.db")
+    run = Run.create(str(tmp_path), "Workcell lifecycle", RunProfile.STANDARD)
+    repository.create_run(run)
+    revision_id = repository.create_workcell_graph_revision(run.id, 1, "a" * 64, actor="human", rationale="approved")
+    task = WorkcellTask("workcell-task-2", run.id, "lifecycle", "Lifecycle", "verify lifecycle", ("tests pass",), True, (), (), (), 1, 0, TaskState.READY)
+    repository.add_workcell_task(task, revision_id, maximum_attempts=1, model_tier="standard")
+    attempt = repository.claim_workcell_task(task.task_id, claimant="parent", model_tier="standard", context_sha256="b" * 64, brief_path="brief.md", context_manifest_path="context.json", result_path="result.json")
+    repository.mark_workcell_attempt_running(attempt.attempt_id, child_session_id="child-1", child_handle={"handle": "h-1"})
+    completed = repository.close_workcell_attempt(attempt.attempt_id, outcome="succeeded", actor="parent", reason="validated result")
+    assert completed.state.value == "succeeded"
+    assert repository.list_workcell_attempts(task.task_id) == (completed,)
