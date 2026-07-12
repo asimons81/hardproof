@@ -1,0 +1,78 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from hardproof.services.workcell_artifacts import (
+    WorkcellArtifactStore,
+    validate_child_result,
+)
+
+
+def result_payload() -> dict[str, object]:
+    return {
+        "contract_version": 1,
+        "run_id": "run-1",
+        "task_id": "task-1",
+        "attempt_id": "attempt-1",
+        "child_session_id": "child-1",
+        "reported_status": "succeeded",
+        "summary": "Implemented safely",
+        "changed_paths": ["hardproof/module.py"],
+        "commands_executed": ["python -m pytest"],
+        "tests_executed": [{"name": "unit", "outcome": "passed"}],
+        "artifacts_produced": [],
+        "remaining_blockers": [],
+        "policy_blockers": [],
+        "approval_blockers": [],
+        "evidence_references": [],
+        "recommended_next_action": "validate result",
+    }
+
+
+def test_store_writes_deterministic_bounded_json_under_attempt(tmp_path: Path) -> None:
+    store = WorkcellArtifactStore(tmp_path, "run-1", "task-1", 1, maximum_bytes=1024)
+    path = store.write_json("context.json", {"token": "secret-value", "files": ["a.py"]})
+    assert path == tmp_path / ".hardproof" / "runs" / "run-1" / "tasks" / "task-1" / "attempts" / "1" / "context.json"
+    assert json.loads(path.read_text(encoding="utf-8"))["token"] == "[REDACTED]"
+    with pytest.raises(ValueError, match="size limit"):
+        store.write_text("brief.md", "x" * 1025)
+
+
+def test_store_rejects_traversal_and_symlink_escape(tmp_path: Path) -> None:
+    store = WorkcellArtifactStore(tmp_path, "run-1", "task-1", 1)
+    with pytest.raises(ValueError, match="invalid Workcell artifact path"):
+        store.write_text("../escape.txt", "no")
+    base = store.attempt_directory
+    base.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    link = base / "linked"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlink creation unavailable")
+    with pytest.raises(ValueError, match="symlink"):
+        store.write_text("linked/escape.txt", "no")
+
+
+def test_child_result_validation_fails_closed_on_identity_or_path_mismatch(tmp_path: Path) -> None:
+    payload = result_payload()
+    result = validate_child_result(payload, run_id="run-1", task_id="task-1", attempt_id="attempt-1", child_session_id="child-1", project_root=tmp_path)
+    assert result.reported_status == "succeeded"
+    payload["attempt_id"] = "attempt-other"
+    with pytest.raises(ValueError, match="attempt identity"):
+        validate_child_result(payload, run_id="run-1", task_id="task-1", attempt_id="attempt-1", child_session_id="child-1", project_root=tmp_path)
+    payload = result_payload()
+    payload["changed_paths"] = ["../escape.py"]
+    with pytest.raises(ValueError, match="path"):
+        validate_child_result(payload, run_id="run-1", task_id="task-1", attempt_id="attempt-1", child_session_id="child-1", project_root=tmp_path)
+
+
+def test_child_result_redacts_secret_bearing_text(tmp_path: Path) -> None:
+    payload = result_payload()
+    payload["summary"] = "token=not-for-storage"
+    result = validate_child_result(payload, run_id="run-1", task_id="task-1", attempt_id="attempt-1", child_session_id="child-1", project_root=tmp_path)
+    assert result.summary == "token=[REDACTED]"
