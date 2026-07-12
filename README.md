@@ -5,9 +5,9 @@
 [![CI](https://github.com/asimons81/hardproof/actions/workflows/ci.yml/badge.svg)](https://github.com/asimons81/hardproof/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/hardproof)](https://pypi.org/project/hardproof/)
-[![X Follow](https://img.shields.io/twitter/follow/asimons81?style=social)](https://x.com/asimons81)
+[![X Follow](https://img.shields.io/twitter/follow/tonysimons_?style=social)](https://x.com/tonysimons_)
 
-> **Alpha software.** v0.3.0 Workcells is the current public alpha on PyPI. v0.3.1 Workcells Hardening has been prepared. v0.4.0 Challenge Chamber development has not begun. Commands, schemas, and contracts may change before v1.0.0.
+> **Alpha software.** v0.3.1 Workcells Hardening is the current public alpha on PyPI. v0.4.0 Challenge Chamber development has not begun. Commands, schemas, and contracts may change before v1.0.0.
 
 Hardproof gives coding agents a persistent, risk-aware engineering process that turns ambiguous software requests into reviewed, verified results while preserving the evidence behind every completion claim.
 
@@ -15,8 +15,8 @@ Hardproof gives coding agents a persistent, risk-aware engineering process that 
 
 ## Current Release
 
-| Current | v0.3.0 Workcells | Released on GitHub and PyPI |
-| Hardening | v0.3.1 Workcells Hardening | Prepared, pending release |
+| Current | v0.3.1 Workcells Hardening | Released on GitHub and PyPI |
+| Previous | v0.3.0 Workcells | Released on GitHub and PyPI |
 | Previous | v0.2.0 Gatehouse | Released on GitHub and PyPI |
 | Previous | v0.1.1 Core Heat | Released on GitHub and PyPI |
 | Previous | v0.1.0 Core Heat | Released on GitHub |
