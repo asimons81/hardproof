@@ -26,7 +26,7 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         "hardproof_run",
         "Start, inspect, pause, resume, or abort a durable Hardproof run. Use status before making stage-sensitive changes.",
         {
-            "action": {"type": "string", "enum": ["start", "status", "pause", "resume", "abort", "workcells_status", "workcells_reconcile"]},
+            "action": {"type": "string", "enum": ["start", "status", "pause", "resume", "abort", "workcells_status", "workcells_run_next", "workcells_reconcile"]},
             "request": STRING,
             "profile": {"type": "string", "enum": ["quick", "standard", "critical"]},
             "run_id": STRING,

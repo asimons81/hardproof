@@ -42,6 +42,7 @@ def _configure(parser: argparse.ArgumentParser) -> None:
     workcells.add_parser("status")
     plan = workcells.add_parser("plan")
     plan.add_argument("--tasks-json", required=True)
+    workcells.add_parser("run-next")
     reconcile = workcells.add_parser("reconcile")
     reconcile.add_argument("attempt_id")
     show = sub.add_parser("show")

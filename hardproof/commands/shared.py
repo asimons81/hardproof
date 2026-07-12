@@ -30,6 +30,7 @@ from hardproof.services.reports import ReportService
 from hardproof.services.risks import RiskService
 from hardproof.services.waivers import WaiverService
 from hardproof.services.workcells import WorkcellService, WorkcellTaskSpec
+from hardproof.services.hermes_children import HermesChildAdapter
 from hardproof.storage.database import Database, DatabaseCorruptionError
 from hardproof.storage.migrations import MigrationError, migrate
 from hardproof.storage.repository import RunRepository
@@ -396,10 +397,34 @@ class CommandService:
                 json.dumps({"graph_revision": created.revision, "waves": created.waves}, sort_keys=True),
                 self.active_run_id(),
             )
+        if rest == ["run-next"]:
+            if self.context.hermes_context is None:
+                raise RuntimeError(
+                    "WORKCELL_CHILD_API_UNAVAILABLE: run-next requires an active public Hermes plugin context"
+                )
+            config = load_config(self.paths.config).workcells
+            if not config.enabled:
+                raise PermissionError("Workcells are disabled by project configuration")
+            launch = WorkcellService(
+                self.repository, maximum_attempts=config.maximum_attempts,
+                default_model_tier=config.default_model_tier, brief_size_limit=config.brief_size_limit,
+                context_manifest_size_limit=config.context_manifest_size_limit,
+                result_size_limit=config.result_size_limit,
+            ).launch_next(
+                self.active_run_id(), project_root=self.context.project_root,
+                adapter=HermesChildAdapter(self.context.hermes_context), claimant=self.context.actor,
+            )
+            if launch is None:
+                return CommandResult(True, "No ready Workcell task is available.", self.active_run_id())
+            return CommandResult(
+                True,
+                f"Workcell child launched: handle={launch.handle} child_session_id={launch.child_session_id or 'unreported'}.",
+                self.active_run_id(),
+            )
         if rest[0] == "reconcile" and len(rest) == 2:
             attempt = self.repository.reconcile_workcell_attempt(rest[1], actor=self.context.actor)
             return CommandResult(True, f"Workcell attempt {attempt.attempt_id}: {attempt.state.value}.", self.active_run_id())
-        raise ValueError("usage: workcells <status|plan --tasks-json JSON|reconcile> [attempt-id]")
+        raise ValueError("usage: workcells <status|plan --tasks-json JSON|run-next|reconcile> [attempt-id]")
 
     def _approve(self, rest: list[str]) -> CommandResult:
         if not rest:

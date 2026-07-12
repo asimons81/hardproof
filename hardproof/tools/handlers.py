@@ -112,6 +112,9 @@ def create_handlers(dependencies: HandlerDependencies) -> dict[str, Callable[...
                 raise ValueError("workcells_reconcile requires attempt_id")
             result = service.execute(["workcells", "reconcile", attempt_id])
             return {"ok": result.ok, "message": result.text}
+        elif action == "workcells_run_next":
+            result = service.execute(["workcells", "run-next"])
+            return {"ok": result.ok, "message": result.text}
         else:
             raise ValueError(f"unknown hardproof_run action: {action}")
         current = service.repository.get_run(result.run_id or service.active_run_id())

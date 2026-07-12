@@ -157,6 +157,7 @@ def test_slash_and_cli_use_same_command_service_output(tmp_path: Path) -> None:
         ["task", "attempts", "task-id"], ["workcells", "status"],
         ["workcells", "reconcile", "attempt-id"],
         ["workcells", "plan", "--tasks-json", "[]"],
+        ["workcells", "run-next"],
     ],
 )
 def test_cli_parser_accepts_every_documented_subcommand(argv: list[str]) -> None:
