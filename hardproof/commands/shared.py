@@ -421,10 +421,19 @@ class CommandService:
                 f"Workcell child launched: handle={launch.handle} child_session_id={launch.child_session_id or 'unreported'}.",
                 self.active_run_id(),
             )
+        if rest[0] == "result" and len(rest) == 2:
+            config = load_config(self.paths.config).workcells
+            outcome = WorkcellService(
+                self.repository, maximum_attempts=config.maximum_attempts,
+                default_model_tier=config.default_model_tier, brief_size_limit=config.brief_size_limit,
+                context_manifest_size_limit=config.context_manifest_size_limit,
+                result_size_limit=config.result_size_limit,
+            ).process_result(rest[1], project_root=self.context.project_root, actor=self.context.actor)
+            return CommandResult(True, f"Workcell result accepted: {outcome}.", self.active_run_id())
         if rest[0] == "reconcile" and len(rest) == 2:
             attempt = self.repository.reconcile_workcell_attempt(rest[1], actor=self.context.actor)
             return CommandResult(True, f"Workcell attempt {attempt.attempt_id}: {attempt.state.value}.", self.active_run_id())
-        raise ValueError("usage: workcells <status|plan --tasks-json JSON|run-next|reconcile> [attempt-id]")
+        raise ValueError("usage: workcells <status|plan --tasks-json JSON|run-next|result ATTEMPT|reconcile> [attempt-id]")
 
     def _approve(self, rest: list[str]) -> CommandResult:
         if not rest:

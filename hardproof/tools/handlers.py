@@ -226,6 +226,12 @@ def create_handlers(dependencies: HandlerDependencies) -> dict[str, Callable[...
                 raise ValueError("workcell_attempts requires task_id")
             result = service.execute(["task", "attempts", task_id])
             return {"ok": result.ok, "attempts": json.loads(result.text)}
+        if action == "workcell_process_result":
+            attempt_id = str(args.get("attempt_id", ""))
+            if not attempt_id:
+                raise ValueError("workcell_process_result requires attempt_id")
+            result = service.execute(["workcells", "result", attempt_id])
+            return {"ok": result.ok, "message": result.text}
         raise ValueError(f"unknown hardproof_task action: {action}")
 
     def transition(args: dict[str, Any]) -> dict[str, Any]:

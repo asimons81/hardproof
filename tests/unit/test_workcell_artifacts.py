@@ -23,6 +23,7 @@ def result_payload() -> dict[str, object]:
         "changed_paths": ["hardproof/module.py"],
         "commands_executed": ["python -m pytest"],
         "tests_executed": [{"name": "unit", "outcome": "passed"}],
+        "acceptance_completed": ["tests pass"],
         "artifacts_produced": [],
         "remaining_blockers": [],
         "policy_blockers": [],

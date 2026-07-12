@@ -44,6 +44,7 @@ class ChildResult:
     changed_paths: tuple[str, ...]
     commands_executed: tuple[str, ...]
     tests_executed: tuple[dict[str, object], ...]
+    acceptance_completed: tuple[str, ...]
     artifacts_produced: tuple[str, ...]
     remaining_blockers: tuple[str, ...]
     policy_blockers: tuple[str, ...]
@@ -140,7 +141,7 @@ def validate_child_result(
         raise ValueError("child result must be an object")
     required = {
         "contract_version", "run_id", "task_id", "attempt_id", "child_session_id", "reported_status",
-        "summary", "changed_paths", "commands_executed", "tests_executed", "artifacts_produced",
+        "summary", "changed_paths", "commands_executed", "tests_executed", "acceptance_completed", "artifacts_produced",
         "remaining_blockers", "policy_blockers", "approval_blockers", "evidence_references", "recommended_next_action",
     }
     missing = sorted(required - set(payload))
@@ -174,7 +175,8 @@ def validate_child_result(
         _CONTRACT_VERSION, run_id, task_id, attempt_id, child_session_id, status,
         _redact_text(str(payload["summary"])), changed,
         tuple(_redact_text(value) for value in _strings(payload["commands_executed"], "commands_executed")),
-        tuple({str(key): value for key, value in item.items()} for item in tests), artifacts,
+        tuple({str(key): value for key, value in item.items()} for item in tests),
+        _strings(payload["acceptance_completed"], "acceptance_completed"), artifacts,
         tuple(_redact_text(value) for value in _strings(payload["remaining_blockers"], "remaining_blockers")),
         tuple(_redact_text(value) for value in _strings(payload["policy_blockers"], "policy_blockers")),
         tuple(_redact_text(value) for value in _strings(payload["approval_blockers"], "approval_blockers")),

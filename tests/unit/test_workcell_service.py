@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 import pytest
 
@@ -76,3 +77,29 @@ def test_launch_next_writes_bounded_handoff_and_records_fresh_child(tmp_path: Pa
     assert (tmp_path / ".hardproof" / "runs" / run.id / "tasks" / "build" / "attempts" / "1" / "brief.md").exists()
     task_id = str(next(item["id"] for item in repository.list_workcell_task_rows(run.id)))
     assert repository.list_workcell_attempts(task_id)[0].state.value == "running"
+
+
+def test_parent_validates_child_result_before_authoritative_success(tmp_path: Path) -> None:
+    repository = repository_at(tmp_path / "state.db")
+    run = Run.create(str(tmp_path), "Result", RunProfile.QUICK)
+    repository.create_run(run)
+    repository.transition_run(run.id, RunStage.IMPLEMENT, reason="test")
+    service = WorkcellService(repository, maximum_attempts=2, default_model_tier="standard")
+    service.create_graph(run.id, (WorkcellTaskSpec("build", "Build", "Build", ("tests",)),))
+    launched = service.launch_next(run.id, project_root=tmp_path, adapter=FakeHermesChildAdapter())
+    assert launched is not None
+    task_id = str(next(item["id"] for item in repository.list_workcell_task_rows(run.id)))
+    attempt = repository.list_workcell_attempts(task_id)[0]
+    changed = tmp_path / "changed.py"
+    changed.write_text("pass\n", encoding="utf-8")
+    result_path = tmp_path / ".hardproof" / "runs" / run.id / "tasks" / "build" / "attempts" / "1" / "result.json"
+    result_path.write_text(json.dumps({
+        "contract_version": 1, "run_id": run.id, "task_id": task_id, "attempt_id": attempt.attempt_id,
+        "child_session_id": "fake-child-1", "reported_status": "succeeded", "summary": "completed",
+        "changed_paths": ["changed.py"], "commands_executed": ["python -m pytest"],
+        "tests_executed": [{"name": "tests", "outcome": "passed"}], "acceptance_completed": ["tests"],
+        "artifacts_produced": [], "remaining_blockers": [], "policy_blockers": [], "approval_blockers": [],
+        "evidence_references": [], "recommended_next_action": "review",
+    }), encoding="utf-8")
+    assert service.process_result(attempt.attempt_id, project_root=tmp_path) == "succeeded"
+    assert repository.list_workcell_attempts(task_id)[0].state.value == "succeeded"

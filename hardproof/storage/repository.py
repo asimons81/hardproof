@@ -451,6 +451,55 @@ class RunRepository:
             AttemptState(str(row["state"])), row["child_session_id"], row["terminal_reason"],
         )
 
+    def get_workcell_attempt_detail(self, attempt_id: str) -> dict[str, object]:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """SELECT attempt.id, attempt.run_id, attempt.task_id, attempt.attempt_number,
+                attempt.state, attempt.result_path, attempt.child_session_id, task.task_key,
+                task.acceptance_json
+                FROM workcell_attempts AS attempt JOIN workcell_tasks AS task ON task.id=attempt.task_id
+                WHERE attempt.id=?""",
+                (attempt_id,),
+            ).fetchone()
+        if row is None:
+            raise LookupError("Workcell attempt not found")
+        result = {str(key): row[key] for key in row.keys()}
+        result["acceptance"] = tuple(json.loads(result.pop("acceptance_json")))
+        return result
+
+    def record_workcell_result_received(self, attempt_id: str, *, actor: str, summary: str) -> None:
+        """Append a bounded validation receipt before closing an attempt."""
+        if not actor.strip():
+            raise ValueError("Workcell result receipt requires actor")
+        timestamp = utc_now()
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute(
+                    "SELECT run_id, task_id, launch_token, child_session_id, state FROM workcell_attempts WHERE id=?",
+                    (attempt_id,),
+                ).fetchone()
+                if row is None:
+                    raise LookupError("Workcell attempt not found")
+                if row["state"] not in {"starting", "running"}:
+                    raise ValueError("Workcell result belongs to a closed attempt")
+                connection.execute(
+                    """INSERT INTO workcell_lifecycle_events(
+                        run_id, task_id, attempt_id, event_type, actor, child_session_id,
+                        previous_state, new_state, details_json, correlation_id, created_at
+                    ) VALUES (?, ?, ?, 'child_result_received', ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        row["run_id"], row["task_id"], attempt_id, actor, row["child_session_id"],
+                        row["state"], row["state"], json.dumps({"summary": summary[:500]}, sort_keys=True),
+                        row["launch_token"], timestamp,
+                    ),
+                )
+            except Exception:
+                connection.rollback()
+                raise
+            else:
+                connection.commit()
+
     def mark_workcell_attempt_running(
         self, attempt_id: str, *, child_session_id: str | None, child_handle: dict[str, object]
     ) -> WorkcellAttempt:

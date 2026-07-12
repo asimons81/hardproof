@@ -12,7 +12,8 @@ from hardproof.domain.enums import ApprovalGate, ArtifactKind, RunProfile, RunSt
 from hardproof.domain.models import new_id
 from hardproof.domain.workcells import TaskState, WorkcellTask, plan_waves, validate_graph
 from hardproof.services.hermes_children import ChildLaunch, ChildSessionAdapter
-from hardproof.services.workcell_artifacts import WorkcellArtifactStore
+from hardproof.services.workcell_artifacts import WorkcellArtifactStore, validate_child_result
+from hardproof.paths import safe_project_relative
 from hardproof.storage.repository import RunRepository
 
 
@@ -156,3 +157,37 @@ class WorkcellService:
             )
             raise
         return launch
+
+    def process_result(self, attempt_id: str, *, project_root: str | Path, actor: str = "parent") -> str:
+        """Validate a durable child result and apply the only authoritative outcome."""
+        detail = self.repository.get_workcell_attempt_detail(attempt_id)
+        child_session_id = detail["child_session_id"]
+        if not isinstance(child_session_id, str) or not child_session_id:
+            raise ValueError("Workcell attempt has no reported child session identity")
+        root = Path(project_root).resolve()
+        result_path = root / safe_project_relative(str(detail["result_path"]))
+        if not result_path.is_file() or result_path.is_symlink():
+            raise ValueError("Workcell result file is missing or unsafe")
+        raw = result_path.read_bytes()
+        if len(raw) > self.result_size_limit:
+            raise ValueError("Workcell result exceeds configured size limit")
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("Workcell result is not valid UTF-8 JSON") from exc
+        result = validate_child_result(
+            payload, run_id=str(detail["run_id"]), task_id=str(detail["task_id"]), attempt_id=attempt_id,
+            child_session_id=child_session_id, project_root=root, maximum_bytes=self.result_size_limit,
+        )
+        for value in (*result.changed_paths, *result.artifacts_produced):
+            if not (root / safe_project_relative(value)).exists():
+                raise ValueError("Workcell result claims a missing path")
+        if result.reported_status == "succeeded":
+            expected = set(cast(tuple[str, ...], detail["acceptance"]))
+            if not expected.issubset(set(result.acceptance_completed)):
+                raise ValueError("Workcell result does not satisfy task acceptance criteria")
+        self.repository.record_workcell_result_received(attempt_id, actor=actor, summary=result.summary)
+        self.repository.close_workcell_attempt(
+            attempt_id, outcome=result.reported_status, actor=actor, reason=result.summary,
+        )
+        return result.reported_status
