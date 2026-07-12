@@ -31,6 +31,13 @@ def test_start_status_runs_and_show(tmp_path: Path) -> None:
     assert ".hardproof" in str(tmp_path / ".hardproof")
 
 
+def test_workcell_read_and_recovery_commands_are_available(tmp_path: Path) -> None:
+    service = CommandService(context(tmp_path))
+    service.execute(["start", "standard", "Workcell command coverage"])
+    assert "No Workcell tasks" in service.execute(["tasks"]).text
+    assert json.loads(service.execute(["workcells", "status"]).text) == {"task_counts": {}}
+
+
 def test_human_approval_and_waiver_sources_are_attributable(tmp_path: Path) -> None:
     service = CommandService(context(tmp_path, source="slash"))
     service.execute(["start", "standard", "Request"])
@@ -57,7 +64,7 @@ def test_config_init_validate_db_migrate_and_doctor(tmp_path: Path) -> None:
     assert service.execute(["config", "validate"]).ok
     assert service.execute(["db", "migrate"]).ok
     status = json.loads(service.execute(["db", "status"]).text)
-    assert status["schema_version"] == 2
+    assert status["schema_version"] == 3
     assert status["pending_migrations"] == []
     assert status["mutation_occurred"] is False
     dry_run = json.loads(service.execute(["db", "migrate", "--dry-run"]).text)
@@ -130,6 +137,9 @@ def test_slash_and_cli_use_same_command_service_output(tmp_path: Path) -> None:
         ["policy", "waivers", "list"],
         ["policy", "explain", "--tool", "terminal", "--args-json", "{}"],
         ["policy", "suggest-risk", "--text", "change"],
+        ["tasks"], ["task", "graph"], ["task", "show", "task-id"],
+        ["task", "attempts", "task-id"], ["workcells", "status"],
+        ["workcells", "reconcile", "attempt-id"],
     ],
 )
 def test_cli_parser_accepts_every_documented_subcommand(argv: list[str]) -> None:

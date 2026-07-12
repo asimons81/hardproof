@@ -604,6 +604,36 @@ class RunRepository:
             reason="public Hermes child status is unavailable; recovery required",
         )
 
+    def list_workcell_task_rows(self, run_id: str) -> tuple[dict[str, object], ...]:
+        """Return bounded inspectable Workcell task state in deterministic order."""
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                """SELECT id, task_key, title, status, wave_number, priority, model_tier,
+                maximum_attempts, attempt_count, blocking_reason, escalation_state
+                FROM workcell_tasks WHERE run_id=? ORDER BY priority, task_key""",
+                (run_id,),
+            ).fetchall()
+        return tuple({str(key): row[key] for key in row.keys()} for row in rows)
+
+    def list_workcell_lifecycle_events(self, attempt_id: str) -> tuple[dict[str, object], ...]:
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                """SELECT sequence, event_type, actor, child_session_id, previous_state,
+                new_state, details_json, correlation_id, created_at
+                FROM workcell_lifecycle_events WHERE attempt_id=? ORDER BY sequence""",
+                (attempt_id,),
+            ).fetchall()
+        return tuple(
+            {
+                "sequence": int(row["sequence"]), "event_type": str(row["event_type"]),
+                "actor": str(row["actor"]), "child_session_id": row["child_session_id"],
+                "previous_state": row["previous_state"], "new_state": row["new_state"],
+                "details": json.loads(row["details_json"]), "correlation_id": str(row["correlation_id"]),
+                "created_at": str(row["created_at"]),
+            }
+            for row in rows
+        )
+
     def add_verification_check(self, check: VerificationCheck) -> None:
         with self.database.connect() as connection:
             connection.execute(

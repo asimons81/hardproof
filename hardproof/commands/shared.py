@@ -245,6 +245,8 @@ class CommandService:
             "doctor": self._doctor, "runs": self._runs, "show": self._show,
             "config": self._config, "db": self._db, "complete": self._complete,
             "policy": self._policy, "migrate-state": self._migrate_state,
+            "tasks": self._workcell_tasks, "task": self._workcell_task,
+            "workcells": self._workcells,
         }
         if command not in handlers:
             raise ValueError(f"unknown Hardproof subcommand: {command}")
@@ -293,6 +295,66 @@ class CommandService:
             f"Status: {run.status.value}\nPending risk suggestions: {pending_risks}",
             run.id,
         )
+
+    def _workcell_tasks(self, rest: list[str]) -> CommandResult:
+        self._expect_no_args("tasks", rest)
+        run_id = self.active_run_id()
+        rows = self.repository.list_workcell_task_rows(run_id)
+        if not rows:
+            return CommandResult(True, "No Workcell tasks recorded.", run_id)
+        return CommandResult(
+            True,
+            "\n".join(
+                f"{row['task_key']} {row['status']} attempts={row['attempt_count']}/{row['maximum_attempts']} tier={row['model_tier']}"
+                for row in rows
+            ),
+            run_id,
+        )
+
+    def _workcell_task(self, rest: list[str]) -> CommandResult:
+        if not rest:
+            raise ValueError("usage: task <graph|show|attempts> [task-id]")
+        run_id = self.active_run_id()
+        action = rest[0]
+        rows = self.repository.list_workcell_task_rows(run_id)
+        if action == "graph" and len(rest) == 1:
+            return CommandResult(True, json.dumps(rows, sort_keys=True, indent=2, default=str), run_id)
+        if action == "show" and len(rest) == 2:
+            found = next((row for row in rows if row["id"] == rest[1] or row["task_key"] == rest[1]), None)
+            if found is None:
+                raise LookupError("Workcell task not found")
+            return CommandResult(True, json.dumps(found, sort_keys=True, indent=2, default=str), run_id)
+        if action == "attempts" and len(rest) == 2:
+            task = next((row for row in rows if row["id"] == rest[1] or row["task_key"] == rest[1]), None)
+            if task is None:
+                raise LookupError("Workcell task not found")
+            attempts = self.repository.list_workcell_attempts(str(task["id"]))
+            payload = [
+                {
+                    "id": item.attempt_id, "number": item.attempt_number, "state": item.state.value,
+                    "child_session_id": item.child_session_id, "model_tier": item.model_tier,
+                    "terminal_reason": item.terminal_reason,
+                }
+                for item in attempts
+            ]
+            return CommandResult(True, json.dumps(payload, sort_keys=True, indent=2), run_id)
+        raise ValueError("usage: task <graph|show|attempts> [task-id]")
+
+    def _workcells(self, rest: list[str]) -> CommandResult:
+        if not rest or rest[0] == "status":
+            if len(rest) > 1:
+                raise ValueError("usage: workcells <status|reconcile> [attempt-id]")
+            run_id = self.active_run_id()
+            rows = self.repository.list_workcell_task_rows(run_id)
+            counts: dict[str, int] = {}
+            for row in rows:
+                state = str(row["status"])
+                counts[state] = counts.get(state, 0) + 1
+            return CommandResult(True, json.dumps({"task_counts": counts}, sort_keys=True), run_id)
+        if rest[0] == "reconcile" and len(rest) == 2:
+            attempt = self.repository.reconcile_workcell_attempt(rest[1], actor=self.context.actor)
+            return CommandResult(True, f"Workcell attempt {attempt.attempt_id}: {attempt.state.value}.", self.active_run_id())
+        raise ValueError("usage: workcells <status|reconcile> [attempt-id]")
 
     def _approve(self, rest: list[str]) -> CommandResult:
         if not rest:
