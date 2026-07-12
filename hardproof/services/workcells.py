@@ -5,10 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
+from pathlib import Path
+from typing import cast
 
 from hardproof.domain.enums import ApprovalGate, ArtifactKind, RunProfile, RunStage
 from hardproof.domain.models import new_id
 from hardproof.domain.workcells import TaskState, WorkcellTask, plan_waves, validate_graph
+from hardproof.services.hermes_children import ChildLaunch, ChildSessionAdapter
+from hardproof.services.workcell_artifacts import WorkcellArtifactStore
 from hardproof.storage.repository import RunRepository
 
 
@@ -34,10 +38,17 @@ class CreatedWorkcellGraph:
 
 
 class WorkcellService:
-    def __init__(self, repository: RunRepository, *, maximum_attempts: int, default_model_tier: str) -> None:
+    def __init__(
+        self, repository: RunRepository, *, maximum_attempts: int, default_model_tier: str,
+        brief_size_limit: int = 65_536, context_manifest_size_limit: int = 32_768,
+        result_size_limit: int = 65_536,
+    ) -> None:
         self.repository = repository
         self.maximum_attempts = maximum_attempts
         self.default_model_tier = default_model_tier
+        self.brief_size_limit = brief_size_limit
+        self.context_manifest_size_limit = context_manifest_size_limit
+        self.result_size_limit = result_size_limit
 
     def create_graph(self, run_id: str, specs: tuple[WorkcellTaskSpec, ...]) -> CreatedWorkcellGraph:
         run = self.repository.get_run(run_id)
@@ -91,3 +102,57 @@ class WorkcellService:
     def refresh_readiness(self, run_id: str) -> tuple[str, ...]:
         """Re-evaluate durable dependencies before the scheduler attempts a claim."""
         return self.repository.refresh_workcell_readiness(run_id)
+
+    def launch_next(
+        self, run_id: str, *, project_root: str | Path, adapter: ChildSessionAdapter, claimant: str = "scheduler"
+    ) -> ChildLaunch | None:
+        """Claim, materialize, and launch one deterministic ready Workcell task."""
+        self.refresh_readiness(run_id)
+        ready = [item for item in self.repository.list_workcell_task_rows(run_id) if item["status"] == "ready"]
+        if not ready:
+            return None
+        selected = ready[0]
+        detail = self.repository.get_workcell_task_detail(str(selected["id"]))
+        root = Path(project_root).resolve()
+        attempt_number = int(cast(int, detail["attempt_count"])) + 1
+        store = WorkcellArtifactStore(
+            root, run_id, str(detail["task_key"]), attempt_number,
+            maximum_bytes=max(self.brief_size_limit, self.context_manifest_size_limit, self.result_size_limit),
+        )
+        brief = "\n".join((
+            f"# Workcell task: {detail['task_key']}", "", f"## Objective\n{detail['objective']}",
+            "", "## Acceptance criteria", *(f"- {item}" for item in cast(tuple[str, ...], detail["acceptance"])),
+            "", "## Allowed read scope", *(f"- {item}" for item in cast(tuple[str, ...], detail["read_scope"]) or ("- none declared",)),
+            "", "## Allowed write scope", *(f"- {item}" for item in cast(tuple[str, ...], detail["write_scope"]) or ("- none declared",)),
+            "", "## Constraints\nDo not create approvals or waivers. Return only the versioned result contract.", "",
+        ))
+        context = {
+            "version": 1, "run_id": run_id, "task_id": detail["id"], "task_key": detail["task_key"],
+            "graph_revision_id": detail["graph_revision_id"], "model_tier": detail["model_tier"],
+            "brief_path": "brief.md", "result_path": "result.json",
+        }
+        serialized_context = json.dumps(context, sort_keys=True, separators=(",", ":"))
+        context_sha256 = hashlib.sha256(serialized_context.encode("utf-8")).hexdigest()
+        relative_base = store.attempt_directory.relative_to(root).as_posix()
+        attempt = self.repository.claim_workcell_task(
+            str(detail["id"]), claimant=claimant, model_tier=str(detail["model_tier"]),
+            context_sha256=context_sha256, brief_path=f"{relative_base}/brief.md",
+            context_manifest_path=f"{relative_base}/context.json", result_path=f"{relative_base}/result.json",
+        )
+        try:
+            if len(brief.encode("utf-8")) > self.brief_size_limit:
+                raise ValueError("Workcell brief exceeds configured size limit")
+            if len(serialized_context.encode("utf-8")) > self.context_manifest_size_limit:
+                raise ValueError("Workcell context manifest exceeds configured size limit")
+            store.write_text("brief.md", brief)
+            store.write_json("context.json", context)
+            launch = adapter.launch(brief, serialized_context, attempt.model_tier)
+            self.repository.mark_workcell_attempt_running(
+                attempt.attempt_id, child_session_id=launch.child_session_id, child_handle=launch.raw,
+            )
+        except Exception as exc:
+            self.repository.close_workcell_attempt(
+                attempt.attempt_id, outcome="failed", actor=claimant, reason=f"launch failed: {type(exc).__name__}",
+            )
+            raise
+        return launch

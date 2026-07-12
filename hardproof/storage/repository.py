@@ -647,6 +647,23 @@ class RunRepository:
             ).fetchall()
         return tuple({str(key): row[key] for key in row.keys()} for row in rows)
 
+    def get_workcell_task_detail(self, task_id: str) -> dict[str, object]:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """SELECT id, run_id, task_key, title, objective, acceptance_json, required,
+                read_scope_json, write_scope_json, graph_revision_id, wave_number, priority,
+                model_tier, maximum_attempts, attempt_count, status
+                FROM workcell_tasks WHERE id=?""",
+                (task_id,),
+            ).fetchone()
+        if row is None:
+            raise LookupError("Workcell task not found")
+        result = {str(key): row[key] for key in row.keys()}
+        for key in ("acceptance", "read_scope", "write_scope"):
+            result[key] = tuple(json.loads(result.pop(f"{key}_json")))
+        result["required"] = bool(result["required"])
+        return result
+
     def list_workcell_lifecycle_events(self, attempt_id: str) -> tuple[dict[str, object], ...]:
         with self.database.connect() as connection:
             rows = connection.execute(

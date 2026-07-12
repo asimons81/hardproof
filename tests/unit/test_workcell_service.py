@@ -7,6 +7,7 @@ import pytest
 from hardproof.domain.enums import ApprovalGate, ArtifactKind, RunProfile, RunStage
 from hardproof.domain.models import Approval, Artifact, Run
 from hardproof.services.workcells import WorkcellService, WorkcellTaskSpec
+from hardproof.services.hermes_children import FakeHermesChildAdapter
 from hardproof.storage.database import Database
 from hardproof.storage.migrations import migrate
 from hardproof.storage.repository import RunRepository
@@ -59,3 +60,19 @@ def test_readiness_promotes_only_satisfied_dependencies(tmp_path: Path) -> None:
     attempt = repository.claim_workcell_task(str(build_id), claimant="parent", model_tier="standard", context_sha256="b" * 64, brief_path="brief.md", context_manifest_path="context.json", result_path="result.json")
     repository.close_workcell_attempt(attempt.attempt_id, outcome="succeeded", actor="parent", reason="validated")
     assert service.refresh_readiness(run.id) == ("verify",)
+
+
+def test_launch_next_writes_bounded_handoff_and_records_fresh_child(tmp_path: Path) -> None:
+    repository = repository_at(tmp_path / "state.db")
+    run = Run.create(str(tmp_path), "Launch", RunProfile.QUICK)
+    repository.create_run(run)
+    repository.transition_run(run.id, RunStage.IMPLEMENT, reason="test")
+    adapter = FakeHermesChildAdapter()
+    service = WorkcellService(repository, maximum_attempts=2, default_model_tier="standard")
+    service.create_graph(run.id, (WorkcellTaskSpec("build", "Build", "Build safely", ("tests",), write_scope=("src/**",)),))
+    launched = service.launch_next(run.id, project_root=tmp_path, adapter=adapter)
+    assert launched is not None and launched.child_session_id == "fake-child-1"
+    assert adapter.launches[0][0].startswith("# Workcell task: build")
+    assert (tmp_path / ".hardproof" / "runs" / run.id / "tasks" / "build" / "attempts" / "1" / "brief.md").exists()
+    task_id = str(next(item["id"] for item in repository.list_workcell_task_rows(run.id)))
+    assert repository.list_workcell_attempts(task_id)[0].state.value == "running"
