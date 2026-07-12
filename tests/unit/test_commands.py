@@ -12,6 +12,8 @@ import pytest
 from hardproof.commands.cli import build_parser, run_cli
 from hardproof.commands.shared import CommandContext, CommandService
 from hardproof.commands.slash import make_slash_handler
+from hardproof.domain.enums import ApprovalGate, ArtifactKind, RunStage
+from hardproof.domain.models import Approval, Artifact
 
 
 def context(tmp_path: Path, *, source: str = "cli") -> CommandContext:
@@ -36,6 +38,20 @@ def test_workcell_read_and_recovery_commands_are_available(tmp_path: Path) -> No
     service.execute(["start", "standard", "Workcell command coverage"])
     assert "No Workcell tasks" in service.execute(["tasks"]).text
     assert json.loads(service.execute(["workcells", "status"]).text) == {"task_counts": {}}
+
+
+def test_workcell_plan_command_requires_existing_human_approval(tmp_path: Path) -> None:
+    service = CommandService(context(tmp_path))
+    started = service.execute(["start", "standard", "Workcell plan command"])
+    assert started.run_id is not None
+    run = service.repository.transition_run(started.run_id, RunStage.IMPLEMENT, reason="test")
+    service.repository.add_artifact(Artifact("plan-1", run.id, ArtifactKind.PLAN, "plan.md", "a" * 64, run.created_at))
+    tasks = json.dumps([{"key": "build", "title": "Build", "objective": "Build safely", "acceptance": ["tests"]}])
+    with pytest.raises(PermissionError, match="plan approval"):
+        service.execute(["workcells", "plan", "--tasks-json", tasks])
+    service.repository.add_approval(Approval("plan-approval", run.id, ApprovalGate.PLAN, "human", "cli", "approved", run.created_at))
+    result = service.execute(["workcells", "plan", "--tasks-json", tasks])
+    assert json.loads(result.text)["waves"] == [["build"]]
 
 
 def test_human_approval_and_waiver_sources_are_attributable(tmp_path: Path) -> None:
@@ -140,6 +156,7 @@ def test_slash_and_cli_use_same_command_service_output(tmp_path: Path) -> None:
         ["tasks"], ["task", "graph"], ["task", "show", "task-id"],
         ["task", "attempts", "task-id"], ["workcells", "status"],
         ["workcells", "reconcile", "attempt-id"],
+        ["workcells", "plan", "--tasks-json", "[]"],
     ],
 )
 def test_cli_parser_accepts_every_documented_subcommand(argv: list[str]) -> None:

@@ -40,6 +40,8 @@ def _configure(parser: argparse.ArgumentParser) -> None:
     task_attempts.add_argument("task_id")
     workcells = sub.add_parser("workcells").add_subparsers(dest="workcells_command", required=True)
     workcells.add_parser("status")
+    plan = workcells.add_parser("plan")
+    plan.add_argument("--tasks-json", required=True)
     reconcile = workcells.add_parser("reconcile")
     reconcile.add_argument("attempt_id")
     show = sub.add_parser("show")
@@ -82,6 +84,8 @@ def _to_argv(args: argparse.Namespace) -> list[str]:
     if command == "task":
         return [command, args.task_command, *([args.task_id] if hasattr(args, "task_id") else [])]
     if command == "workcells":
+        if args.workcells_command == "plan":
+            return [command, "plan", "--tasks-json", args.tasks_json]
         return [command, args.workcells_command, *([args.attempt_id] if hasattr(args, "attempt_id") else [])]
     if command == "config":
         return [command, args.config_command]

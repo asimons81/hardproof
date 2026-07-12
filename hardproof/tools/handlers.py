@@ -208,6 +208,15 @@ def create_handlers(dependencies: HandlerDependencies) -> dict[str, Callable[...
         if action == "workcell_graph":
             result = service.execute(["task", "graph"])
             return {"ok": result.ok, "graph": json.loads(result.text)}
+        if action == "workcell_create_graph":
+            definitions = args.get("workcell_tasks")
+            if not isinstance(definitions, list):
+                raise ValueError("workcell_create_graph requires workcell_tasks")
+            result = service.execute([
+                "workcells", "plan", "--tasks-json",
+                json.dumps(definitions, sort_keys=True, separators=(",", ":")),
+            ])
+            return {"ok": result.ok, **json.loads(result.text)}
         if action == "workcell_attempts":
             task_id = str(args.get("task_id") or args.get("key") or "")
             if not task_id:

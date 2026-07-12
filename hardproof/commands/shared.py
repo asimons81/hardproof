@@ -29,6 +29,7 @@ from hardproof.services.runs import RunService
 from hardproof.services.reports import ReportService
 from hardproof.services.risks import RiskService
 from hardproof.services.waivers import WaiverService
+from hardproof.services.workcells import WorkcellService, WorkcellTaskSpec
 from hardproof.storage.database import Database, DatabaseCorruptionError
 from hardproof.storage.migrations import MigrationError, migrate
 from hardproof.storage.repository import RunRepository
@@ -351,10 +352,54 @@ class CommandService:
                 state = str(row["status"])
                 counts[state] = counts.get(state, 0) + 1
             return CommandResult(True, json.dumps({"task_counts": counts}, sort_keys=True), run_id)
+        if rest[0] == "plan" and len(rest) == 3 and rest[1] == "--tasks-json":
+            raw = rest[2]
+            if len(raw) > 65_536:
+                raise ValueError("workcells plan tasks JSON exceeds 65536 characters")
+            try:
+                values = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                raise ValueError("workcells plan --tasks-json must be valid JSON") from exc
+            if not isinstance(values, list) or not values:
+                raise ValueError("workcells plan --tasks-json must be a non-empty array")
+            specs: list[WorkcellTaskSpec] = []
+            for value in values:
+                if not isinstance(value, dict):
+                    raise ValueError("every Workcell task specification must be an object")
+                required = {"key", "title", "objective", "acceptance"}
+                if not required <= set(value):
+                    raise ValueError("every Workcell task requires key, title, objective, and acceptance")
+                acceptance = value["acceptance"]
+                dependencies = value.get("dependencies", [])
+                read_scope = value.get("read_scope", [])
+                write_scope = value.get("write_scope", [])
+                for name, sequence in {
+                    "acceptance": acceptance, "dependencies": dependencies,
+                    "read_scope": read_scope, "write_scope": write_scope,
+                }.items():
+                    if not isinstance(sequence, list) or any(not isinstance(item, str) for item in sequence):
+                        raise ValueError(f"Workcell task {name} must be a list of strings")
+                specs.append(WorkcellTaskSpec(
+                    str(value["key"]), str(value["title"]), str(value["objective"]), tuple(acceptance),
+                    tuple(dependencies), bool(value.get("required", True)), tuple(read_scope), tuple(write_scope),
+                    int(value.get("priority", 0)), str(value["model_tier"]) if "model_tier" in value else None,
+                ))
+            config = load_config(self.paths.config).workcells
+            if not config.enabled:
+                raise PermissionError("Workcells are disabled by project configuration")
+            created = WorkcellService(
+                self.repository, maximum_attempts=config.maximum_attempts,
+                default_model_tier=config.default_model_tier,
+            ).create_graph(self.active_run_id(), tuple(specs))
+            return CommandResult(
+                True,
+                json.dumps({"graph_revision": created.revision, "waves": created.waves}, sort_keys=True),
+                self.active_run_id(),
+            )
         if rest[0] == "reconcile" and len(rest) == 2:
             attempt = self.repository.reconcile_workcell_attempt(rest[1], actor=self.context.actor)
             return CommandResult(True, f"Workcell attempt {attempt.attempt_id}: {attempt.state.value}.", self.active_run_id())
-        raise ValueError("usage: workcells <status|reconcile> [attempt-id]")
+        raise ValueError("usage: workcells <status|plan --tasks-json JSON|reconcile> [attempt-id]")
 
     def _approve(self, rest: list[str]) -> CommandResult:
         if not rest:

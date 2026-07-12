@@ -51,7 +51,7 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         "hardproof_task",
         "Create, update, list, or inspect durable implementation tasks and their acceptance evidence.",
         {
-            "action": {"type": "string", "enum": ["create", "update", "list", "get", "workcell_graph", "workcell_attempts"]},
+            "action": {"type": "string", "enum": ["create", "update", "list", "get", "workcell_create_graph", "workcell_graph", "workcell_attempts"]},
             "key": STRING,
             "title": STRING,
             "description": STRING,
@@ -62,6 +62,7 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             "files": STRING_ARRAY,
             "acceptance_notes": STRING,
             "task_id": STRING,
+            "workcell_tasks": {"type": "array", "items": {"type": "object"}},
         },
         ["action"],
     ),
