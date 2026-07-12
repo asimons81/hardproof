@@ -300,3 +300,68 @@ def test_stale_evidence_and_update_task_edge(tmp_path: Path) -> None:
     from hardproof.domain.models import utc_now
     risk_svc = RiskService(repository)
     risk_svc.suggest(run.id, text="risky change", now=utc_now())
+
+
+def test_claim_workcell_invalid_claimant(tmp_path: Path) -> None:
+    """Cover repository claim_workcell_task empty-claimant rejection."""
+    repository = repository_at(tmp_path / "state.db")
+    run = Run.create(str(tmp_path), "ClaimTest", RunProfile.QUICK)
+    repository.create_run(run)
+    repository.transition_run(run.id, RunStage.IMPLEMENT, reason="test")
+    from hardproof.services.workcells import WorkcellService, WorkcellTaskSpec
+    service = WorkcellService(repository, maximum_attempts=2, default_model_tier="standard")
+    service.create_graph(run.id, (WorkcellTaskSpec("t1", "T1", "Do", ("ok",)),))
+    service.refresh_readiness(run.id)
+    rows = repository.list_workcell_task_rows(run.id)
+    with pytest.raises(ValueError, match="invalid Workcell claim"):
+        repository.claim_workcell_task(
+            str(rows[0]["id"]), claimant="", model_tier="standard",
+            context_sha256="a" * 64, brief_path="b.md",
+            context_manifest_path="c.json", result_path="r.json",
+        )
+
+
+def test_claim_non_ready_workcell_task(tmp_path: Path) -> None:
+    """Cover claim a task that is not in 'ready' status."""
+    repository = repository_at(tmp_path / "state.db")
+    run = Run.create(str(tmp_path), "NotReady", RunProfile.QUICK)
+    repository.create_run(run)
+    repository.transition_run(run.id, RunStage.IMPLEMENT, reason="test")
+    from hardproof.services.workcells import WorkcellService, WorkcellTaskSpec
+    service = WorkcellService(repository, maximum_attempts=2, default_model_tier="standard")
+    service.create_graph(run.id, (WorkcellTaskSpec("t1", "T1", "Do", ("ok",)),))
+    # Task is 'pending', not 'ready' — claim must fail
+    rows = repository.list_workcell_task_rows(run.id)
+    with pytest.raises(ValueError, match="not ready"):
+        repository.claim_workcell_task(
+            str(rows[0]["id"]), claimant="test", model_tier="standard",
+            context_sha256="a" * 64, brief_path="b.md",
+            context_manifest_path="c.json", result_path="r.json",
+        )
+
+
+def test_claim_workcell_retry_requires_material_change(tmp_path: Path) -> None:
+    """Cover that retry without any material change raises."""
+    repository = repository_at(tmp_path / "state.db")
+    run = Run.create(str(tmp_path), "NoChangeRetry", RunProfile.QUICK)
+    repository.create_run(run)
+    repository.transition_run(run.id, RunStage.IMPLEMENT, reason="test")
+    from hardproof.services.workcells import WorkcellService, WorkcellTaskSpec
+    service = WorkcellService(repository, maximum_attempts=2, default_model_tier="standard")
+    service.create_graph(run.id, (WorkcellTaskSpec("t1", "T1", "Do", ("ok",)),))
+    service.refresh_readiness(run.id)
+    rows = repository.list_workcell_task_rows(run.id)
+    attempt = repository.claim_workcell_task(
+        str(rows[0]["id"]), claimant="test", model_tier="standard",
+        context_sha256="a" * 64, brief_path="b.md",
+        context_manifest_path="c.json", result_path="r.json",
+    )
+    repository.close_workcell_attempt(
+        attempt.attempt_id, outcome="failed", actor="test", reason="no change",
+    )
+    with pytest.raises(ValueError, match="material change"):
+        repository.authorize_workcell_retry(
+            str(rows[0]["id"]), attempt.attempt_id, actor="human",
+            reason="retry", material_change="",
+            new_context_sha256=attempt.context_sha256, new_model_tier=attempt.model_tier,
+        )
