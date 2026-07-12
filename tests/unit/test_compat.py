@@ -5,6 +5,7 @@ import json
 import pytest
 
 from hardproof.compat import CompatibilityError, inspect_context, require_compatible
+from importlib import metadata
 
 
 class CompleteContext:
@@ -54,3 +55,13 @@ def test_optional_lifecycle_capabilities_are_separate() -> None:
         "kanban_lifecycle_hooks": False,
         "subagent_lifecycle_hooks": False,
     }
+
+
+def test_installed_version_returns_none_when_package_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Covers compat.py lines 53-54: PackageNotFoundError path."""
+    def fake_version(name: str) -> str:
+        raise metadata.PackageNotFoundError(name)
+
+    monkeypatch.setattr(metadata, "version", fake_version)
+    report = inspect_context(CompleteContext())
+    assert report.hermes_version is None
