@@ -39,3 +39,23 @@ def test_standard_workcell_graph_requires_plan_approval_and_persists_waves(tmp_p
     assert result.waves == (("lint", "build"), ("verify",))
     rows = repository.list_workcell_task_rows(run.id)
     assert [(item["task_key"], item["wave_number"]) for item in rows] == [("lint", 1), ("build", 1), ("verify", 2)]
+
+
+def test_readiness_promotes_only_satisfied_dependencies(tmp_path: Path) -> None:
+    repository = repository_at(tmp_path / "state.db")
+    run = Run.create(str(tmp_path), "Readiness", RunProfile.QUICK)
+    repository.create_run(run)
+    repository.transition_run(run.id, RunStage.IMPLEMENT, reason="test")
+    service = WorkcellService(repository, maximum_attempts=2, default_model_tier="standard")
+    service.create_graph(
+        run.id,
+        (
+            WorkcellTaskSpec("build", "Build", "Build", ("tests",)),
+            WorkcellTaskSpec("verify", "Verify", "Verify", ("tests",), dependencies=("build",)),
+        ),
+    )
+    assert service.refresh_readiness(run.id) == ("build",)
+    build_id = next(item["id"] for item in repository.list_workcell_task_rows(run.id) if item["task_key"] == "build")
+    attempt = repository.claim_workcell_task(str(build_id), claimant="parent", model_tier="standard", context_sha256="b" * 64, brief_path="brief.md", context_manifest_path="context.json", result_path="result.json")
+    repository.close_workcell_attempt(attempt.attempt_id, outcome="succeeded", actor="parent", reason="validated")
+    assert service.refresh_readiness(run.id) == ("verify",)

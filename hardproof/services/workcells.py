@@ -87,3 +87,7 @@ class WorkcellService:
             for key in wave:
                 self.repository.set_workcell_wave(by_key[key].task_id, wave_number)
         return CreatedWorkcellGraph(graph_id, revision, waves)
+
+    def refresh_readiness(self, run_id: str) -> tuple[str, ...]:
+        """Re-evaluate durable dependencies before the scheduler attempts a claim."""
+        return self.repository.refresh_workcell_readiness(run_id)

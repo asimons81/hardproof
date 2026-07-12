@@ -666,6 +666,53 @@ class RunRepository:
             for row in rows
         )
 
+    def refresh_workcell_readiness(self, run_id: str) -> tuple[str, ...]:
+        """Promote dependency-satisfied pending tasks, blocking failed dependency paths."""
+        timestamp = utc_now()
+        unsuccessful = {"blocked", "failed", "interrupted", "cancelled", "escalated"}
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                tasks = connection.execute(
+                    "SELECT id, task_key FROM workcell_tasks WHERE run_id=? AND status='pending' ORDER BY wave_number, priority, task_key",
+                    (run_id,),
+                ).fetchall()
+                ready: list[str] = []
+                for task in tasks:
+                    dependencies = connection.execute(
+                        """SELECT dependency.status, dependency.task_key, edge.required
+                        FROM workcell_task_dependencies AS edge
+                        JOIN workcell_tasks AS dependency ON dependency.id=edge.dependency_task_id
+                        WHERE edge.task_id=? ORDER BY dependency.task_key""",
+                        (task["id"],),
+                    ).fetchall()
+                    failed = next(
+                        (
+                            row for row in dependencies
+                            if bool(row["required"]) and str(row["status"]) in unsuccessful
+                        ),
+                        None,
+                    )
+                    if failed is not None:
+                        connection.execute(
+                            "UPDATE workcell_tasks SET status='blocked', blocking_reason=?, updated_at=? WHERE id=? AND status='pending'",
+                            (f"required dependency failed: {failed['task_key']}", timestamp, task["id"]),
+                        )
+                        continue
+                    if all(not bool(row["required"]) or str(row["status"]) == "succeeded" for row in dependencies):
+                        cursor = connection.execute(
+                            "UPDATE workcell_tasks SET status='ready', updated_at=? WHERE id=? AND status='pending'",
+                            (timestamp, task["id"]),
+                        )
+                        if cursor.rowcount == 1:
+                            ready.append(str(task["task_key"]))
+            except Exception:
+                connection.rollback()
+                raise
+            else:
+                connection.commit()
+        return tuple(ready)
+
     def add_verification_check(self, check: VerificationCheck) -> None:
         with self.database.connect() as connection:
             connection.execute(
