@@ -3,6 +3,8 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import pytest
+
 from hardproof.domain.enums import (
     ApprovalGate,
     ArtifactKind,
@@ -154,3 +156,33 @@ def test_workcell_lifecycle_transitions_are_parent_authoritative(tmp_path: Path)
     completed = repository.close_workcell_attempt(attempt.attempt_id, outcome="succeeded", actor="parent", reason="validated result")
     assert completed.state.value == "succeeded"
     assert repository.list_workcell_attempts(task.task_id) == (completed,)
+
+
+def test_workcell_retry_requires_material_change_and_is_bounded(tmp_path: Path) -> None:
+    repository = repository_at(tmp_path / "hardproof.db")
+    run = Run.create(str(tmp_path), "Workcell retry", RunProfile.STANDARD)
+    repository.create_run(run)
+    revision_id = repository.create_workcell_graph_revision(run.id, 1, "a" * 64, actor="human", rationale="approved")
+    task = WorkcellTask("workcell-task-3", run.id, "retry", "Retry", "retry safely", ("tests pass",), True, (), (), (), 1, 0, TaskState.READY)
+    repository.add_workcell_task(task, revision_id, maximum_attempts=2, model_tier="standard")
+    attempt = repository.claim_workcell_task(task.task_id, claimant="parent", model_tier="standard", context_sha256="b" * 64, brief_path="brief.md", context_manifest_path="context.json", result_path="result.json")
+    repository.close_workcell_attempt(attempt.attempt_id, outcome="failed", actor="parent", reason="test failed")
+    with pytest.raises(ValueError, match="material"):
+        repository.authorize_workcell_retry(task.task_id, attempt.attempt_id, actor="human", reason="retry", material_change="", new_context_sha256="b" * 64, new_model_tier="standard")
+    repository.authorize_workcell_retry(task.task_id, attempt.attempt_id, actor="human", reason="retry", material_change="added failure remediation", new_context_sha256="b" * 64, new_model_tier="standard")
+    retried = repository.claim_workcell_task(task.task_id, claimant="parent", model_tier="standard", context_sha256="b" * 64, brief_path="brief-2.md", context_manifest_path="context-2.json", result_path="result-2.json")
+    assert retried.attempt_number == 2
+
+
+def test_workcell_reconciliation_marks_unobservable_child_interrupted_idempotently(tmp_path: Path) -> None:
+    repository = repository_at(tmp_path / "hardproof.db")
+    run = Run.create(str(tmp_path), "Workcell recovery", RunProfile.STANDARD)
+    repository.create_run(run)
+    revision_id = repository.create_workcell_graph_revision(run.id, 1, "a" * 64, actor="human", rationale="approved")
+    task = WorkcellTask("workcell-task-4", run.id, "recover", "Recover", "recover safely", ("tests pass",), True, (), (), (), 1, 0, TaskState.READY)
+    repository.add_workcell_task(task, revision_id, maximum_attempts=2, model_tier="standard")
+    attempt = repository.claim_workcell_task(task.task_id, claimant="parent", model_tier="standard", context_sha256="b" * 64, brief_path="brief.md", context_manifest_path="context.json", result_path="result.json")
+    repository.mark_workcell_attempt_running(attempt.attempt_id, child_session_id="child-1", child_handle={"handle": "h-1"})
+    interrupted = repository.reconcile_workcell_attempt(attempt.attempt_id, actor="recovery")
+    assert interrupted.state.value == "interrupted"
+    assert repository.reconcile_workcell_attempt(attempt.attempt_id, actor="recovery") == interrupted

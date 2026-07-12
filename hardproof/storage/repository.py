@@ -514,6 +514,96 @@ class RunRepository:
                 connection.commit()
         return self._get_workcell_attempt(attempt_id)
 
+    def authorize_workcell_retry(
+        self,
+        task_id: str,
+        previous_attempt_id: str,
+        *,
+        actor: str,
+        reason: str,
+        material_change: str,
+        new_context_sha256: str,
+        new_model_tier: str,
+    ) -> str:
+        """Record an attributed material retry decision and return a task to ready."""
+        if not actor.strip() or not reason.strip() or len(new_context_sha256) != 64 or not new_model_tier.strip():
+            raise ValueError("invalid Workcell retry request")
+        timestamp = utc_now()
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute(
+                    """SELECT attempt.*, task.maximum_attempts, task.attempt_count, task.status AS task_status
+                    FROM workcell_attempts AS attempt JOIN workcell_tasks AS task ON task.id=attempt.task_id
+                    WHERE attempt.id=? AND attempt.task_id=?""",
+                    (previous_attempt_id, task_id),
+                ).fetchone()
+                if row is None:
+                    raise LookupError("Workcell attempt not found for task")
+                if row["state"] not in {
+                    AttemptState.BLOCKED.value, AttemptState.FAILED.value,
+                    AttemptState.INTERRUPTED.value, AttemptState.CANCELLED.value,
+                }:
+                    raise ValueError("only a closed unsuccessful Workcell attempt can be retried")
+                if int(row["attempt_count"]) >= int(row["maximum_attempts"]):
+                    raise ValueError("Workcell task has exhausted its attempts")
+                changed = (
+                    bool(material_change.strip())
+                    or new_context_sha256 != row["context_sha256"]
+                    or new_model_tier != row["model_tier"]
+                )
+                if not changed:
+                    raise ValueError("Workcell retry requires a material change")
+                decision_id = new_id("workcell-retry")
+                connection.execute(
+                    """INSERT INTO workcell_retry_decisions(
+                        id, task_id, previous_attempt_id, actor, reason, material_change,
+                        old_context_sha256, new_context_sha256, old_model_tier, new_model_tier, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        decision_id, task_id, previous_attempt_id, actor, reason, material_change,
+                        row["context_sha256"], new_context_sha256, row["model_tier"], new_model_tier, timestamp,
+                    ),
+                )
+                cursor = connection.execute(
+                    """UPDATE workcell_tasks SET status='ready', blocking_reason=NULL, model_tier=?, updated_at=?
+                    WHERE id=? AND status=?""",
+                    (new_model_tier, timestamp, task_id, row["task_status"]),
+                )
+                if cursor.rowcount != 1:
+                    raise RuntimeError("Workcell task changed concurrently")
+                connection.execute(
+                    """INSERT INTO workcell_lifecycle_events(
+                        run_id, task_id, attempt_id, event_type, actor, child_session_id,
+                        previous_state, new_state, details_json, correlation_id, created_at
+                    ) VALUES (?, ?, ?, 'retry_authorized', ?, ?, ?, 'ready', ?, ?, ?)""",
+                    (
+                        row["run_id"], task_id, previous_attempt_id, actor, row["child_session_id"],
+                        row["state"], json.dumps({"reason": reason, "material_change": material_change}, sort_keys=True),
+                        decision_id, timestamp,
+                    ),
+                )
+            except Exception:
+                connection.rollback()
+                raise
+            else:
+                connection.commit()
+        return decision_id
+
+    def reconcile_workcell_attempt(self, attempt_id: str, *, actor: str) -> WorkcellAttempt:
+        """Fail closed when public Hermes cannot prove a recorded child is alive."""
+        if not actor.strip():
+            raise ValueError("Workcell reconciliation requires actor")
+        attempt = self._get_workcell_attempt(attempt_id)
+        if attempt.state not in {AttemptState.STARTING, AttemptState.RUNNING}:
+            return attempt
+        return self.close_workcell_attempt(
+            attempt_id,
+            outcome=AttemptState.INTERRUPTED.value,
+            actor=actor,
+            reason="public Hermes child status is unavailable; recovery required",
+        )
+
     def add_verification_check(self, check: VerificationCheck) -> None:
         with self.database.connect() as connection:
             connection.execute(
