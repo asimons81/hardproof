@@ -73,6 +73,9 @@ def test_task_create_update_list_get(tmp_path: Path) -> None:
         "acceptance_notes": "focused test passes",
     })
     assert updated["task"]["status"] == "completed"
+    assert call(handlers["hardproof_task"], {"action": "workcell_graph"})["graph"] == []
+    status = call(handlers["hardproof_run"], {"action": "workcells_status"})
+    assert status["workcells"] == {"task_counts": {}}
 
 
 def test_transition_verify_and_report_are_dependency_injected(tmp_path: Path) -> None:

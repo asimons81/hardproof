@@ -103,6 +103,15 @@ def create_handlers(dependencies: HandlerDependencies) -> dict[str, Callable[...
             result = service.execute(argv)
         elif action == "abort":
             result = service.execute(["abort", args.get("reason", "model requested abort")])
+        elif action == "workcells_status":
+            result = service.execute(["workcells", "status"])
+            return {"ok": result.ok, "workcells": json.loads(result.text)}
+        elif action == "workcells_reconcile":
+            attempt_id = str(args.get("attempt_id", ""))
+            if not attempt_id:
+                raise ValueError("workcells_reconcile requires attempt_id")
+            result = service.execute(["workcells", "reconcile", attempt_id])
+            return {"ok": result.ok, "message": result.text}
         else:
             raise ValueError(f"unknown hardproof_run action: {action}")
         current = service.repository.get_run(result.run_id or service.active_run_id())
@@ -196,6 +205,15 @@ def create_handlers(dependencies: HandlerDependencies) -> dict[str, Callable[...
             if found is None:
                 raise LookupError(f"task not found: {args.get('key')}")
             return {"ok": True, "task": _task_payload(found)}
+        if action == "workcell_graph":
+            result = service.execute(["task", "graph"])
+            return {"ok": result.ok, "graph": json.loads(result.text)}
+        if action == "workcell_attempts":
+            task_id = str(args.get("task_id") or args.get("key") or "")
+            if not task_id:
+                raise ValueError("workcell_attempts requires task_id")
+            result = service.execute(["task", "attempts", task_id])
+            return {"ok": result.ok, "attempts": json.loads(result.text)}
         raise ValueError(f"unknown hardproof_task action: {action}")
 
     def transition(args: dict[str, Any]) -> dict[str, Any]:
