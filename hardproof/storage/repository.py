@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from hardproof.domain.models import (
@@ -20,9 +21,11 @@ from hardproof.domain.models import (
     VerificationCheck,
     Waiver,
     WaiverEvent,
+    new_id,
     utc_now,
 )
 from hardproof.domain.enums import RiskLevel, RunStage, RunStatus
+from hardproof.domain.workcells import AttemptState, WorkcellAttempt, WorkcellTask
 from hardproof.storage.database import Database
 
 
@@ -276,6 +279,132 @@ class RunRepository:
             )
         if cursor.rowcount != 1:
             raise LookupError(f"task not found: {task.task_key}")
+
+    def create_workcell_graph_revision(
+        self, run_id: str, revision: int, graph_sha256: str, *, actor: str, rationale: str
+    ) -> str:
+        if revision < 1 or len(graph_sha256) != 64 or not actor.strip() or not rationale.strip():
+            raise ValueError("invalid Workcell graph revision")
+        graph_id = new_id("workcell-graph")
+        with self.database.connect() as connection:
+            connection.execute(
+                """INSERT INTO workcell_graph_revisions(
+                    id, run_id, revision, approved_plan_artifact_id, approved_plan_sha256,
+                    graph_sha256, created_at, created_by, rationale
+                ) VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?)""",
+                (graph_id, run_id, revision, graph_sha256, utc_now(), actor, rationale),
+            )
+        return graph_id
+
+    def add_workcell_task(
+        self, task: WorkcellTask, graph_revision_id: str, *, maximum_attempts: int, model_tier: str
+    ) -> None:
+        if not 1 <= maximum_attempts <= 10 or not model_tier.strip():
+            raise ValueError("invalid Workcell task attempt bound or model tier")
+        timestamp = utc_now()
+        with self.database.connect() as connection:
+            connection.execute(
+                """INSERT INTO workcell_tasks(
+                    id, run_id, graph_revision_id, task_key, title, objective, acceptance_json,
+                    required, read_scope_json, write_scope_json, brief_path, context_manifest_path,
+                    result_path, wave_number, priority, model_tier, maximum_attempts, attempt_count,
+                    status, blocking_reason, escalation_state, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, 0, ?, NULL, NULL, ?, ?)""",
+                (
+                    task.task_id, task.run_id, graph_revision_id, task.key, task.title, task.objective,
+                    json.dumps(task.acceptance), int(task.required), json.dumps(task.read_scope),
+                    json.dumps(task.write_scope), task.priority, model_tier, maximum_attempts,
+                    task.state.value, timestamp, timestamp,
+                ),
+            )
+
+    def claim_workcell_task(
+        self,
+        task_id: str,
+        *,
+        claimant: str,
+        model_tier: str,
+        context_sha256: str,
+        brief_path: str,
+        context_manifest_path: str,
+        result_path: str,
+    ) -> WorkcellAttempt:
+        """Atomically create the sole active attempt for a ready Workcell task."""
+        if not claimant.strip() or not model_tier.strip() or len(context_sha256) != 64:
+            raise ValueError("invalid Workcell claim")
+        timestamp = utc_now()
+        expires_at = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(
+            timespec="milliseconds"
+        ).replace("+00:00", "Z")
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute(
+                    "SELECT * FROM workcell_tasks WHERE id=?", (task_id,)
+                ).fetchone()
+                if row is None:
+                    raise LookupError("Workcell task not found")
+                if row["status"] != "ready":
+                    raise ValueError("Workcell task is not ready to claim")
+                if int(row["attempt_count"]) >= int(row["maximum_attempts"]):
+                    raise ValueError("Workcell task has exhausted its attempts")
+                attempt_id = new_id("workcell-attempt")
+                launch_token = new_id("workcell-launch")
+                attempt_number = int(row["attempt_count"]) + 1
+                connection.execute(
+                    """INSERT INTO workcell_attempts(
+                        id, run_id, task_id, attempt_number, state, launch_token, model_tier,
+                        context_sha256, brief_path, context_manifest_path, result_path,
+                        child_session_id, child_handle_json, started_at, ended_at, created_at,
+                        updated_at, terminal_reason
+                    ) VALUES (?, ?, ?, ?, 'starting', ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, NULL)""",
+                    (
+                        attempt_id, row["run_id"], task_id, attempt_number, launch_token,
+                        model_tier, context_sha256, brief_path, context_manifest_path, result_path,
+                        timestamp, timestamp,
+                    ),
+                )
+                connection.execute(
+                    """INSERT INTO workcell_claims(task_id, attempt_id, claim_token, claimant, acquired_at, expires_at)
+                    VALUES (?, ?, ?, ?, ?, ?)""",
+                    (task_id, attempt_id, launch_token, claimant, timestamp, expires_at),
+                )
+                cursor = connection.execute(
+                    """UPDATE workcell_tasks SET status='starting', attempt_count=?, updated_at=?
+                    WHERE id=? AND status='ready'""",
+                    (attempt_number, timestamp, task_id),
+                )
+                if cursor.rowcount != 1:
+                    raise RuntimeError("Workcell task changed concurrently")
+                connection.execute(
+                    """INSERT INTO workcell_lifecycle_events(
+                        run_id, task_id, attempt_id, event_type, actor, child_session_id,
+                        previous_state, new_state, details_json, correlation_id, created_at
+                    ) VALUES (?, ?, ?, 'claim_acquired', ?, NULL, 'ready', 'starting', '{}', ?, ?)""",
+                    (row["run_id"], task_id, attempt_id, claimant, launch_token, timestamp),
+                )
+            except Exception:
+                connection.rollback()
+                raise
+            else:
+                connection.commit()
+        return WorkcellAttempt.create(
+            attempt_id, str(row["run_id"]), task_id, attempt_number, launch_token, model_tier, context_sha256
+        )
+
+    def list_workcell_attempts(self, task_id: str) -> tuple[WorkcellAttempt, ...]:
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM workcell_attempts WHERE task_id=? ORDER BY attempt_number", (task_id,)
+            ).fetchall()
+        return tuple(
+            WorkcellAttempt(
+                str(row["id"]), str(row["run_id"]), str(row["task_id"]), int(row["attempt_number"]),
+                str(row["launch_token"]), str(row["model_tier"]), str(row["context_sha256"]),
+                AttemptState(str(row["state"])), row["child_session_id"], row["terminal_reason"],
+            )
+            for row in rows
+        )
 
     def add_verification_check(self, check: VerificationCheck) -> None:
         with self.database.connect() as connection:
