@@ -5,9 +5,9 @@ This file loads as project context when Hermes Agent starts in the Hardproof rep
 ## Project Identity
 
 - **Hardproof** is a persistent, risk-aware engineering protocol for Hermes Agent.
-- **Current public release:** v0.3.0 Workcells (PyPI, GitHub)
-- **Current development boundary:** v0.3.1 Workcells Hardening prepared, pending release.
-- **Workcells implementation:** released (v0.3.0); hardening complete on `fix/v0.3.1-workcells-hardening`.
+- **Current public release:** v0.3.1 Workcells Hardening (PyPI, GitHub)
+- **Current development boundary:** v0.4.0 Challenge Chamber — **not started**.
+- **Workcells hardening:** released (v0.3.1).
 - **Next planned product release:** v0.4.0 Challenge Chamber — **not started**.
 - Hardproof is a standalone Hermes plugin discovered through the `hermes_agent.plugins` entry-point group.
 - It uses only public Hermes registration, hook, command, skill, and dispatch APIs.
@@ -263,7 +263,7 @@ python -m pytest tests/unit/test_domain_transitions.py tests/unit/test_stage_rul
 
 ## Task Boundaries
 
-- **Current development task:** v0.3.1 Workcells Hardening — prepared, pending release review.
+- **Current development task:** v0.4.0 Challenge Chamber — **not started**.
 - **Next planned product release:** v0.4.0 Challenge Chamber — **not started**.
 - Do not begin v0.4.0 implementation during the v0.3.1 release program.
 
