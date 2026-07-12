@@ -6,7 +6,7 @@ launches, and result validation belong to higher layers.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from enum import StrEnum
 from typing import Iterable
 
@@ -24,12 +24,29 @@ class TaskState(StrEnum):
     ESCALATED = "escalated"
 
 
+class AttemptState(StrEnum):
+    STARTING = "starting"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    BLOCKED = "blocked"
+    FAILED = "failed"
+    INTERRUPTED = "interrupted"
+    CANCELLED = "cancelled"
+
+
 TERMINAL_TASK_STATES = frozenset(
     {TaskState.SUCCEEDED, TaskState.BLOCKED, TaskState.FAILED, TaskState.CANCELLED, TaskState.ESCALATED}
 )
 UNSUCCESSFUL_DEPENDENCY_STATES = frozenset(
     {TaskState.BLOCKED, TaskState.FAILED, TaskState.INTERRUPTED, TaskState.CANCELLED, TaskState.ESCALATED}
 )
+TERMINAL_ATTEMPT_STATES = frozenset(
+    {AttemptState.SUCCEEDED, AttemptState.BLOCKED, AttemptState.FAILED, AttemptState.INTERRUPTED, AttemptState.CANCELLED}
+)
+ATTEMPT_TRANSITIONS: dict[AttemptState, frozenset[AttemptState]] = {
+    AttemptState.STARTING: frozenset({AttemptState.RUNNING, AttemptState.BLOCKED, AttemptState.FAILED, AttemptState.INTERRUPTED, AttemptState.CANCELLED}),
+    AttemptState.RUNNING: frozenset({AttemptState.SUCCEEDED, AttemptState.BLOCKED, AttemptState.FAILED, AttemptState.INTERRUPTED, AttemptState.CANCELLED}),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +82,68 @@ class WorkcellTask:
         result = asdict(self)
         result["state"] = self.state.value
         return result
+
+
+@dataclass(frozen=True, slots=True)
+class WorkcellAttempt:
+    attempt_id: str
+    run_id: str
+    task_id: str
+    attempt_number: int
+    launch_token: str
+    model_tier: str
+    context_sha256: str
+    state: AttemptState = AttemptState.STARTING
+    child_session_id: str | None = None
+    terminal_reason: str | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("attempt_id", "run_id", "task_id", "launch_token", "model_tier"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{name} must be non-empty")
+        if self.attempt_number < 1:
+            raise ValueError("attempt_number must be positive")
+        if len(self.context_sha256) != 64 or any(char not in "0123456789abcdef" for char in self.context_sha256.lower()):
+            raise ValueError("context_sha256 must be a SHA-256 digest")
+        object.__setattr__(self, "state", AttemptState(self.state))
+        if self.state in TERMINAL_ATTEMPT_STATES and not (self.terminal_reason or "").strip():
+            raise ValueError("terminal attempt requires terminal_reason")
+        if self.state not in TERMINAL_ATTEMPT_STATES and self.terminal_reason is not None:
+            raise ValueError("non-terminal attempt cannot have terminal_reason")
+
+    @classmethod
+    def create(
+        cls,
+        attempt_id: str,
+        run_id: str,
+        task_id: str,
+        attempt_number: int,
+        launch_token: str,
+        model_tier: str,
+        context_sha256: str,
+    ) -> "WorkcellAttempt":
+        return cls(attempt_id, run_id, task_id, attempt_number, launch_token, model_tier, context_sha256)
+
+
+def transition_attempt(
+    attempt: WorkcellAttempt,
+    target: AttemptState,
+    *,
+    actor: str,
+    reason: str | None = None,
+) -> WorkcellAttempt:
+    """Validate an authoritative attempt transition without side effects."""
+    if not actor.strip():
+        raise ValueError("attempt transition requires actor")
+    target = AttemptState(target)
+    if attempt.state in TERMINAL_ATTEMPT_STATES:
+        raise ValueError("terminal attempt is immutable")
+    if target not in ATTEMPT_TRANSITIONS.get(attempt.state, frozenset()):
+        raise ValueError(f"invalid attempt transition: {attempt.state} -> {target}")
+    if target in TERMINAL_ATTEMPT_STATES and not (reason or "").strip():
+        reason = f"transitioned by {actor}"
+    return replace(attempt, state=target, terminal_reason=reason if target in TERMINAL_ATTEMPT_STATES else None)
 
 
 @dataclass(frozen=True, slots=True)

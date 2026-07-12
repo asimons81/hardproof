@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import pytest
 
-from hardproof.domain.workcells import TaskState, WorkcellTask, plan_waves, validate_graph
+from hardproof.domain.workcells import (
+    AttemptState,
+    TaskState,
+    WorkcellAttempt,
+    WorkcellTask,
+    plan_waves,
+    transition_attempt,
+    validate_graph,
+)
 
 
 def task(key: str, dependencies: tuple[str, ...] = (), *, priority: int = 0) -> WorkcellTask:
@@ -36,3 +44,14 @@ def test_failed_required_dependency_blocks_dependent_task() -> None:
     plan = plan_waves((done, failed, dependent))
     assert plan.waves == (("done",),)
     assert plan.blocked == {"dependent": "required dependency failed: failed"}
+
+
+def test_attempt_transitions_are_finite_and_terminal_attempts_are_immutable() -> None:
+    attempt = WorkcellAttempt.create("attempt-1", "run-1", "task-a", 1, "token-1", "standard", "a" * 64)
+    running = transition_attempt(attempt, AttemptState.RUNNING, actor="scheduler")
+    succeeded = transition_attempt(running, AttemptState.SUCCEEDED, actor="parent")
+    assert succeeded.state is AttemptState.SUCCEEDED
+    with pytest.raises(ValueError, match="terminal"):
+        transition_attempt(succeeded, AttemptState.RUNNING, actor="scheduler")
+    with pytest.raises(ValueError, match="invalid attempt transition"):
+        transition_attempt(attempt, AttemptState.SUCCEEDED, actor="parent")
