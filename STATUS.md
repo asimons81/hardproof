@@ -1,9 +1,11 @@
 # Hardproof Status
 
-Latest public alpha: v0.2.0 Gatehouse
+Current public release: v0.2.0 Gatehouse
 PyPI: pip install hardproof
-Current task: documentation and repository hygiene pass
-Hygiene status: ready for merge
-Next planned release: v0.3.0 Workcells
+Documentation and repository hygiene: complete
+Dependency PR review: complete
+Open pull requests: zero
+Required main checks: passing
+Next release: v0.3.0 Workcells
 Workcells implementation: not started
-Current blockers: none
+Repository readiness: ready

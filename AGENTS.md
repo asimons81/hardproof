@@ -6,7 +6,7 @@ This file loads as project context when Hermes Agent starts in the Hardproof rep
 
 - **Hardproof** is a persistent, risk-aware engineering protocol for Hermes Agent.
 - **Current public release:** v0.2.0 Gatehouse (PyPI, GitHub)
-- **Current development boundary:** documentation and repository hygiene pass
+- **Current development boundary:** ready for v0.3.0 Workcells.
 - **Next planned product release:** v0.3.0 Workcells — **not started**
 - Hardproof is a standalone Hermes plugin discovered through the `hermes_agent.plugins` entry-point group.
 - It uses only public Hermes registration, hook, command, skill, and dispatch APIs.
@@ -172,7 +172,7 @@ These rules must never be violated:
 
 ### Evidence
 - Stale evidence (recorded against a different workspace Git HEAD) cannot satisfy completion gates.
-- Evidence records the Git HEAD at verification time and binary diffs against the working tree.
+- Evidence records the Git HEAD at verification time and a tracked-file diff against the working tree.
 
 ### Storage
 - Migrations are forward-only and preserve history.
@@ -262,7 +262,7 @@ python -m pytest tests/unit/test_domain_transitions.py tests/unit/test_stage_rul
 
 ## Task Boundaries
 
-- **Current maintenance task:** docs and repository hygiene (v0.2.0 post-release)
+- **Current maintenance task:** complete. Repository ready for v0.3.0.
 - **Next planned product release:** v0.3.0 Workcells
 - **Do not begin Workcells implementation during this maintenance pass.**
 - Do not change Hardproof protocol behavior unless a genuine P0 or P1 defect is discovered while validating documentation.
