@@ -23,3 +23,8 @@ def test_project_relative_path_rejects_traversal_and_absolute_forms(value: str) 
 
 def test_project_relative_path_accepts_windows_separators() -> None:
     assert safe_project_relative(r"artifacts\runs") == Path("artifacts/runs")
+
+
+def test_project_relative_path_rejects_empty_and_dot_segments() -> None:
+    with pytest.raises(ValueError, match="non-empty"):
+        safe_project_relative("")

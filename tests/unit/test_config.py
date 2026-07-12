@@ -243,3 +243,31 @@ workcells:
     )
     with pytest.raises(ConfigError, match="concurrency"):
         load_config(path)
+
+
+def test_workcells_config_rejects_non_mapping(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    path.write_text("schema_version: 3\nworkcells: 42\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="must be a mapping"):
+        load_config(path)
+
+
+def test_workcells_config_rejects_unknown_keys(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    path.write_text("schema_version: 3\nworkcells:\n  nonexistent_key: true\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="unknown keys"):
+        load_config(path)
+
+
+def test_workcells_config_rejects_non_bool_enabled(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    path.write_text("schema_version: 3\nworkcells:\n  enabled: 42\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="enabled must be boolean"):
+        load_config(path)
+
+
+def test_workcells_config_rejects_out_of_range_attempts(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    path.write_text("schema_version: 3\nworkcells:\n  maximum_attempts: 0\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="maximum_attempts"):
+        load_config(path)

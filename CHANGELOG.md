@@ -2,6 +2,30 @@
 
 All notable changes to Hardproof are documented here.
 
+## [0.3.0] - 2026-07-12
+
+### Added
+
+- Workcells dependency-aware task graphs with deterministic validation, cycle detection, and dependency-safe wave planning.
+- Transactional SQLite claims with atomic transitions, one-active-attempt enforcement, and fail-closed recovery.
+- Bounded child artifact store with path traversal, symlink escape, size, and redaction checks.
+- Public-Hermes child adapter using only `dispatch_tool("delegate_task")` with a deterministic fake for tests.
+- Immutable attempt state machines with validated transitions and mandatory terminal reasons.
+- Authoritative child-result validation: identity match, size bounds, missing-field detection, and acceptance-criteria checking.
+- Workcell inspection, retry, recovery, and run-next commands on CLI and slash surfaces.
+- Workcells configuration section with tier defaults, per-task overrides, and size-limit validation.
+- Schema migration 003 with graph, task, attempt, dependency, and lifecycle event tables.
+- 31 new Workcells tests across unit, service, and integration layers.
+
+### Configuration
+
+- `workcells.maximum_attempts` (default: 3) — per-task retry limit
+- `workcells.default_model_tier` (required) — provider-neutral tier key
+- `workcells.brief_size_limit` (default: 65536) — byte limit for child brief
+- `workcells.context_manifest_size_limit` (default: 32768) — byte limit for context manifest
+- `workcells.result_size_limit` (default: 65536) — byte limit for child result
+- Per-task tiers may override `default_model_tier` in task specs
+
 ## [0.2.0] - 2026-07-11
 
 ### Added

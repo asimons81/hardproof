@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 
-from hardproof.services.hermes_children import FakeHermesChildAdapter, HermesChildAdapter
+import pytest
+
+from hardproof.services.hermes_children import ChildLaunchError, FakeHermesChildAdapter, HermesChildAdapter
 
 
 class Context:
@@ -29,3 +31,50 @@ def test_fake_adapter_is_deterministic_and_does_not_call_models() -> None:
     assert first.child_session_id == "fake-child-1"
     assert second.child_session_id == "fake-child-2"
     assert adapter.launches == (("Implement task", "brief", "standard"),) * 2
+
+
+def test_public_adapter_requires_non_empty_inputs() -> None:
+    context = Context()
+    adapter = HermesChildAdapter(context)
+    with pytest.raises(ValueError, match="brief, context, and model tier"):
+        adapter.launch("", "context", "standard")
+    with pytest.raises(ValueError, match="brief, context, and model tier"):
+        adapter.launch("brief", "", "standard")
+    with pytest.raises(ValueError, match="brief, context, and model tier"):
+        adapter.launch("brief", "context", "")
+
+
+def test_public_adapter_raises_on_dispatch_failure() -> None:
+    class BrokenContext:
+        def dispatch_tool(self, name: str, args: dict[str, object]) -> str:
+            raise RuntimeError("network failure")
+    adapter = HermesChildAdapter(BrokenContext())
+    with pytest.raises(ChildLaunchError, match="child launch failed"):
+        adapter.launch("Implement", "context", "standard")
+
+
+def test_public_adapter_raises_on_invalid_response() -> None:
+    class BadResponseContext:
+        def dispatch_tool(self, name: str, args: dict[str, object]) -> str:
+            return "not even json"
+    adapter = HermesChildAdapter(BadResponseContext())
+    with pytest.raises(ChildLaunchError, match="invalid JSON"):
+        adapter.launch("Implement", "context", "standard")
+
+
+def test_public_adapter_raises_on_missing_handle() -> None:
+    class NoHandleContext:
+        def dispatch_tool(self, name: str, args: dict[str, object]) -> str:
+            return json.dumps({"results": [{}]})
+    adapter = HermesChildAdapter(NoHandleContext())
+    with pytest.raises(ChildLaunchError, match="did not return a handle"):
+        adapter.launch("Implement", "context", "standard")
+
+
+def test_public_adapter_raises_on_refusal() -> None:
+    class RefusalContext:
+        def dispatch_tool(self, name: str, args: dict[str, object]) -> str:
+            return json.dumps({"error": "rate limited"})
+    adapter = HermesChildAdapter(RefusalContext())
+    with pytest.raises(ChildLaunchError, match="refused"):
+        adapter.launch("Implement", "context", "standard")

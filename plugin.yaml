@@ -1,5 +1,5 @@
 name: hardproof
-version: 0.2.0
+version: 0.3.0
 description: Persistent, risk-aware engineering protocol with durable verification evidence.
 author: Hardproof contributors
 kind: workflow
