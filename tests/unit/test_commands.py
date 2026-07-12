@@ -70,7 +70,7 @@ def test_config_init_validate_db_migrate_and_doctor(tmp_path: Path) -> None:
     dry_run = json.loads(service.execute(["db", "migrate", "--dry-run"]).text)
     assert dry_run["mutation_occurred"] is False
     explained = json.loads(service.execute(["config", "explain"]).text)
-    assert explained["schema_version"] == 2
+    assert explained["schema_version"] == 3
     assert explained["stage_graph"]["required_stages"] == ["VERIFY", "DELIVER", "COMPLETE"]
     doctor = service.execute(["doctor"])
     assert "Git repository" in doctor.text

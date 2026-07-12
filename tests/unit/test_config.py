@@ -11,10 +11,12 @@ from hardproof.domain.enums import RunProfile, RunStage
 def test_missing_config_loads_safe_defaults_without_creating_file(tmp_path: Path) -> None:
     path = tmp_path / ".hardproof" / "config.yaml"
     config = load_config(path)
-    assert config.schema_version == 2
+    assert config.schema_version == 3
     assert config.default_profile is RunProfile.STANDARD
     assert config.artifact_directory == Path(".hardproof/runs")
     assert config.verification_checks
+    assert config.workcells.maximum_attempts == 3
+    assert config.workcells.model_selectors["standard"] == "standard"
     assert not path.exists()
 
 
@@ -28,7 +30,7 @@ def test_project_config_overrides_defaults(tmp_path: Path) -> None:
     assert config.default_profile is RunProfile.CRITICAL
     assert config.maximum_stored_output_size == 2048
     assert config.terminal_blocked_patterns
-    assert config.schema_version == 2
+    assert config.schema_version == 3
     assert config.source_schema_version == 1
 
 
@@ -194,3 +196,50 @@ policy:
     config = load_config(path)
     assert config.policy.rules[0].command_regex == "${TOKEN}"
     assert config.policy.rules[0].path_glob == "${HOME}/**"
+
+
+def test_workcells_config_is_bounded_and_provider_neutral(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    path.write_text(
+        """schema_version: 3
+workcells:
+  maximum_attempts: 4
+  default_model_tier: strong
+  model_selectors: {economy: local-small, standard: local-default, strong: local-strong}
+  maximum_active_children: 2
+  allow_shared_workspace_concurrency: true
+  maximum_concurrent_mutating_tasks: 2
+  brief_size_limit: 8192
+  context_manifest_size_limit: 4096
+  result_size_limit: 8192
+  claim_timeout_seconds: 120
+  recovery_behavior: interrupt
+""",
+        encoding="utf-8",
+    )
+    config = load_config(path)
+    assert config.workcells.default_model_tier == "strong"
+    assert config.workcells.maximum_concurrent_mutating_tasks == 2
+
+
+def test_workcells_rejects_unsafe_concurrency_and_unknown_tiers(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    path.write_text(
+        """schema_version: 3
+workcells:
+  default_model_tier: premium
+""",
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigError, match="tier"):
+        load_config(path)
+    path.write_text(
+        """schema_version: 3
+workcells:
+  allow_shared_workspace_concurrency: false
+  maximum_concurrent_mutating_tasks: 2
+""",
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigError, match="concurrency"):
+        load_config(path)

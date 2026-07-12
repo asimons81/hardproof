@@ -443,6 +443,10 @@ class CommandService:
             checks.append(("Stage graph", True, f"{len(graph.edges)} edges; VERIFY required"))
             checks.append(("Policy packs", True, ",".join(config.policy.packs or detected) or "none"))
             checks.append(("Immutable rules", True, "enabled"))
+            checks.append((
+                "Workcells", config.workcells.enabled,
+                f"tier={config.workcells.default_model_tier} active={config.workcells.maximum_active_children} recovery={config.workcells.recovery_behavior}",
+            ))
         except ConfigError as exc:
             checks.append(("Config", False, str(exc)))
         try:
@@ -501,6 +505,17 @@ class CommandService:
                 "stage_graph": graph.to_dict(),
                 "immutable_rules": "enabled",
                 "config_sha256": config_fingerprint(config),
+                "workcells": {
+                    "enabled": config.workcells.enabled,
+                    "maximum_attempts": config.workcells.maximum_attempts,
+                    "default_model_tier": config.workcells.default_model_tier,
+                    "model_selectors": config.workcells.model_selectors,
+                    "maximum_active_children": config.workcells.maximum_active_children,
+                    "allow_shared_workspace_concurrency": config.workcells.allow_shared_workspace_concurrency,
+                    "maximum_concurrent_mutating_tasks": config.workcells.maximum_concurrent_mutating_tasks,
+                    "claim_timeout_seconds": config.workcells.claim_timeout_seconds,
+                    "recovery_behavior": config.workcells.recovery_behavior,
+                },
             }
             return CommandResult(True, json.dumps(payload, sort_keys=True, indent=2))
         if rest[0] == "validate":
