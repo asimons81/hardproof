@@ -174,7 +174,10 @@ def test_malformed_slash_arguments_return_concise_error(tmp_path: Path, raw: str
     assert len(output) < 500
 
 
-def test_policy_waiver_commands_are_human_only_and_share_cli_slash_path(tmp_path: Path) -> None:
+def test_policy_waiver_commands_are_human_only_and_share_cli_slash_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("hardproof.commands.shared.utc_now", lambda: "2026-07-12T19:00:00Z")
     service = CommandService(context(tmp_path, source="cli"))
     service.execute(["start", "standard", "waiver command"])
     created = service.execute([
