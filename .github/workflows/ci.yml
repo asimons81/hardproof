@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  PIP_CONSTRAINT: constraints/ci.txt
+  PIP_BUILD_CONSTRAINT: constraints/ci.txt
+
 permissions:
   contents: read
 
@@ -19,12 +23,17 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: python -m pip install --quiet -e ".[dev]"
+          cache-dependency-path: |
+            pyproject.toml
+            constraints/ci.txt
+      - run: python -m pip install --upgrade "pip==26.1.2"
+      - run: python -m pip install -e ".[dev]"
       - name: Environment diagnostics
         run: |
           python -VV
           python -m pip --version
-          python -m pip list
+          python -m pytest --version
+          python -m pip freeze --all
       - name: Build (wheel contract tests need dist/)
         run: python -m build
       - name: Ruff
@@ -32,21 +41,10 @@ jobs:
       - name: mypy
         run: python -m mypy hardproof
       - name: Coverage
-        env:
-          HARDPROOF_PYTEST_LOG: pytest-coverage.log
-        run: python scripts/ci_pytest.py -x -q --tb=short --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=90
-      - name: Upload coverage test log
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: pytest-coverage
-          path: pytest-coverage.log
-          if-no-files-found: ignore
+        run: python -m pytest --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=90
       - name: Critical module coverage
-        env:
-          HARDPROOF_PYTEST_LOG: pytest-critical-coverage.log
         run: >-
-          python scripts/ci_pytest.py
+          python -m pytest
           tests/unit/test_domain_transitions.py tests/unit/test_stage_rules.py
           tests/unit/test_stage_graph.py tests/unit/test_policy_engine.py tests/unit/test_commands.py
           tests/unit/test_run_service.py tests/unit/test_tool_policy.py
@@ -61,13 +59,6 @@ jobs:
           --cov=hardproof.storage.migrations
           --cov=hardproof.services.evidence
           --cov-report=term-missing --cov-fail-under=95
-      - name: Upload critical coverage test log
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: pytest-critical-coverage
-          path: pytest-critical-coverage.log
-          if-no-files-found: ignore
       - name: Upload coverage
         uses: codecov/codecov-action@v5
         with:
@@ -95,32 +86,21 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-      - run: python -m pip install --quiet -e ".[dev]"
+          cache-dependency-path: |
+            pyproject.toml
+            constraints/ci.txt
+      - run: python -m pip install --upgrade "pip==26.1.2"
+      - run: python -m pip install -e ".[dev]"
       - name: Environment diagnostics
         run: |
           python -VV
           python -m pip --version
-          python -m pip list
-      - name: Capture resolved environment
-        run: python -m pip freeze --all > resolved-${{ runner.os }}-${{ matrix.python }}.txt
-      - name: Upload resolved environment
-        uses: actions/upload-artifact@v7
-        with:
-          name: resolved-${{ runner.os }}-${{ matrix.python }}
-          path: resolved-${{ runner.os }}-${{ matrix.python }}.txt
+          python -m pytest --version
+          python -m pip freeze --all
       - name: Build (wheel contract tests need dist/)
         run: python -m build
       - name: Unit, integration, contract, and e2e tests
-        env:
-          HARDPROOF_PYTEST_LOG: pytest-${{ runner.os }}-${{ matrix.python }}.log
-        run: python scripts/ci_pytest.py -x -q --tb=short
-      - name: Upload test log
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: pytest-${{ runner.os }}-${{ matrix.python }}
-          path: pytest-${{ runner.os }}-${{ matrix.python }}.log
-          if-no-files-found: ignore
+        run: python -m pytest
 
   package:
     name: Build, package-data, license, smoke, and pip-audit
@@ -131,12 +111,17 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: python -m pip install --quiet -e ".[dev]"
+          cache-dependency-path: |
+            pyproject.toml
+            constraints/ci.txt
+      - run: python -m pip install --upgrade "pip==26.1.2"
+      - run: python -m pip install -e ".[dev]"
       - name: Environment diagnostics
         run: |
           python -VV
           python -m pip --version
-          python -m pip list
+          python -m pytest --version
+          python -m pip freeze --all
       - name: Build wheel and sdist
         run: python -m build
       - run: python -m twine check dist/*.whl dist/*.tar.gz
