@@ -32,8 +32,19 @@ jobs:
       - name: mypy
         run: python -m mypy hardproof
       - name: Coverage
+        env:
+          HARDPROOF_PYTEST_LOG: pytest-coverage.log
         run: python scripts/ci_pytest.py -x -q --tb=short --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=90
+      - name: Upload coverage test log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-coverage
+          path: pytest-coverage.log
+          if-no-files-found: ignore
       - name: Critical module coverage
+        env:
+          HARDPROOF_PYTEST_LOG: pytest-critical-coverage.log
         run: >-
           python scripts/ci_pytest.py
           tests/unit/test_domain_transitions.py tests/unit/test_stage_rules.py
@@ -50,6 +61,13 @@ jobs:
           --cov=hardproof.storage.migrations
           --cov=hardproof.services.evidence
           --cov-report=term-missing --cov-fail-under=95
+      - name: Upload critical coverage test log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-critical-coverage
+          path: pytest-critical-coverage.log
+          if-no-files-found: ignore
       - name: Upload coverage
         uses: codecov/codecov-action@v5
         with:
@@ -86,7 +104,16 @@ jobs:
       - name: Build (wheel contract tests need dist/)
         run: python -m build
       - name: Unit, integration, contract, and e2e tests
+        env:
+          HARDPROOF_PYTEST_LOG: pytest-${{ runner.os }}-${{ matrix.python }}.log
         run: python scripts/ci_pytest.py -x -q --tb=short
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-${{ runner.os }}-${{ matrix.python }}
+          path: pytest-${{ runner.os }}-${{ matrix.python }}.log
+          if-no-files-found: ignore
 
   package:
     name: Build, package-data, license, smoke, and pip-audit
