@@ -100,7 +100,13 @@ jobs:
       - name: Build (wheel contract tests need dist/)
         run: python -m build
       - name: Unit, integration, contract, and e2e tests
-        run: python -m pytest
+        run: python -m pytest --junitxml=pytest-results.xml
+      - name: Upload pytest failure report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-${{ matrix.os }}-py${{ matrix.python }}
+          path: pytest-results.xml
 
   package:
     name: Build, package-data, license, smoke, and pip-audit

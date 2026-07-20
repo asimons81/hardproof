@@ -10,12 +10,10 @@ build==1.5.0
 CacheControl==0.14.4
 certifi==2026.6.17
 cffi==2.1.0
-chardet==5.2.0
 charset-normalizer==3.4.9
 colorama==0.4.6
 coverage==7.15.2
 cryptography==49.0.0
-cyclonedx-bom==7.3.0
 cyclonedx-python-lib==11.11.0
 defusedxml==0.7.1
 docutils==0.23
