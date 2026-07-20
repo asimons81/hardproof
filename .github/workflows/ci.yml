@@ -19,13 +19,12 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: python -m pip install -e ".[dev]"
+      - run: python -m pip install --quiet -e ".[dev]"
       - name: Environment diagnostics
         run: |
           python -VV
           python -m pip --version
-          python -m pytest --version
-          python -m pip freeze
+          python -c "from importlib.metadata import version; names = ('PyYAML', 'build', 'cyclonedx-bom', 'hypothesis', 'mypy', 'pip-audit', 'pytest', 'pytest-cov', 'pytest-xdist', 'ruff', 'setuptools', 'twine', 'types-PyYAML', 'wheel'); print('\\n'.join(f'{name}=={version(name)}' for name in names))"
       - name: Build (wheel contract tests need dist/)
         run: python -m build
       - name: Ruff
@@ -33,7 +32,7 @@ jobs:
       - name: mypy
         run: python -m mypy hardproof
       - name: Coverage
-        run: python -m pytest -x -vv --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=90
+        run: python -m pytest -x -q --tb=short --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=90
       - name: Critical module coverage
         run: >-
           python -m pytest
@@ -78,17 +77,16 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-      - run: python -m pip install -e ".[dev]"
+      - run: python -m pip install --quiet -e ".[dev]"
       - name: Environment diagnostics
         run: |
           python -VV
           python -m pip --version
-          python -m pytest --version
-          python -m pip freeze
+          python -c "from importlib.metadata import version; names = ('PyYAML', 'build', 'cyclonedx-bom', 'hypothesis', 'mypy', 'pip-audit', 'pytest', 'pytest-cov', 'pytest-xdist', 'ruff', 'setuptools', 'twine', 'types-PyYAML', 'wheel'); print('\\n'.join(f'{name}=={version(name)}' for name in names))"
       - name: Build (wheel contract tests need dist/)
         run: python -m build
       - name: Unit, integration, contract, and e2e tests
-        run: python -m pytest -x -vv
+        run: python -m pytest -x -q --tb=short
 
   package:
     name: Build, package-data, license, smoke, and pip-audit
@@ -99,13 +97,12 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: python -m pip install -e ".[dev]"
+      - run: python -m pip install --quiet -e ".[dev]"
       - name: Environment diagnostics
         run: |
           python -VV
           python -m pip --version
-          python -m pytest --version
-          python -m pip freeze
+          python -c "from importlib.metadata import version; names = ('PyYAML', 'build', 'cyclonedx-bom', 'hypothesis', 'mypy', 'pip-audit', 'pytest', 'pytest-cov', 'pytest-xdist', 'ruff', 'setuptools', 'twine', 'types-PyYAML', 'wheel'); print('\\n'.join(f'{name}=={version(name)}' for name in names))"
       - name: Build wheel and sdist
         run: python -m build
       - run: python -m twine check dist/*.whl dist/*.tar.gz
