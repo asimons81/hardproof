@@ -101,6 +101,13 @@ jobs:
           python -VV
           python -m pip --version
           python -m pip list
+      - name: Capture resolved environment
+        run: python -m pip freeze --all > resolved-${{ runner.os }}-${{ matrix.python }}.txt
+      - name: Upload resolved environment
+        uses: actions/upload-artifact@v7
+        with:
+          name: resolved-${{ runner.os }}-${{ matrix.python }}
+          path: resolved-${{ runner.os }}-${{ matrix.python }}.txt
       - name: Build (wheel contract tests need dist/)
         run: python -m build
       - name: Unit, integration, contract, and e2e tests
@@ -130,11 +137,6 @@ jobs:
           python -VV
           python -m pip --version
           python -m pip list
-      - name: Upload source test file for repair
-        uses: actions/upload-artifact@v7
-        with:
-          name: source-test-commands
-          path: tests/unit/test_commands.py
       - name: Build wheel and sdist
         run: python -m build
       - run: python -m twine check dist/*.whl dist/*.tar.gz
