@@ -24,7 +24,7 @@ jobs:
         run: |
           python -VV
           python -m pip --version
-          python -c "from importlib.metadata import version; names = ('PyYAML', 'build', 'cyclonedx-bom', 'hypothesis', 'mypy', 'pip-audit', 'pytest', 'pytest-cov', 'pytest-xdist', 'ruff', 'setuptools', 'twine', 'types-PyYAML', 'wheel'); print('\\n'.join(f'{name}=={version(name)}' for name in names))"
+          python -m pip list
       - name: Build (wheel contract tests need dist/)
         run: python -m build
       - name: Ruff
@@ -32,10 +32,10 @@ jobs:
       - name: mypy
         run: python -m mypy hardproof
       - name: Coverage
-        run: python -m pytest -x -q --tb=short --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=90
+        run: python scripts/ci_pytest.py -x -q --tb=short --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=90
       - name: Critical module coverage
         run: >-
-          python -m pytest
+          python scripts/ci_pytest.py
           tests/unit/test_domain_transitions.py tests/unit/test_stage_rules.py
           tests/unit/test_stage_graph.py tests/unit/test_policy_engine.py tests/unit/test_commands.py
           tests/unit/test_run_service.py tests/unit/test_tool_policy.py
@@ -82,11 +82,11 @@ jobs:
         run: |
           python -VV
           python -m pip --version
-          python -c "from importlib.metadata import version; names = ('PyYAML', 'build', 'cyclonedx-bom', 'hypothesis', 'mypy', 'pip-audit', 'pytest', 'pytest-cov', 'pytest-xdist', 'ruff', 'setuptools', 'twine', 'types-PyYAML', 'wheel'); print('\\n'.join(f'{name}=={version(name)}' for name in names))"
+          python -m pip list
       - name: Build (wheel contract tests need dist/)
         run: python -m build
       - name: Unit, integration, contract, and e2e tests
-        run: python -m pytest -x -q --tb=short
+        run: python scripts/ci_pytest.py -x -q --tb=short
 
   package:
     name: Build, package-data, license, smoke, and pip-audit
@@ -102,7 +102,7 @@ jobs:
         run: |
           python -VV
           python -m pip --version
-          python -c "from importlib.metadata import version; names = ('PyYAML', 'build', 'cyclonedx-bom', 'hypothesis', 'mypy', 'pip-audit', 'pytest', 'pytest-cov', 'pytest-xdist', 'ruff', 'setuptools', 'twine', 'types-PyYAML', 'wheel'); print('\\n'.join(f'{name}=={version(name)}' for name in names))"
+          python -m pip list
       - name: Build wheel and sdist
         run: python -m build
       - run: python -m twine check dist/*.whl dist/*.tar.gz
