@@ -60,7 +60,7 @@ jobs:
           --cov=hardproof.services.evidence
           --cov-report=term-missing --cov-fail-under=95
       - name: Upload coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: coverage.xml
           fail_ci_if_error: false
