@@ -4,6 +4,10 @@ on:
   push:
     tags: ["v*"]
 
+env:
+  PIP_CONSTRAINT: constraints/ci.txt
+  PIP_BUILD_CONSTRAINT: constraints/ci.txt
+
 permissions:
   contents: write
   id-token: write
@@ -22,7 +26,17 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            constraints/ci.txt
+      - run: python -m pip install --upgrade "pip==26.1.2"
       - run: python -m pip install -e ".[dev]"
+      - name: Environment diagnostics
+        run: |
+          python -VV
+          python -m pip --version
+          python -m pytest --version
+          python -m pip freeze --all
       - name: Configure SSH signing verification
         run: |
           git config gpg.format ssh
