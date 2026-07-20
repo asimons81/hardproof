@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  PIP_CONSTRAINT: constraints/ci.txt
+  PIP_BUILD_CONSTRAINT: constraints/ci.txt
+
 permissions:
   contents: read
 
@@ -19,7 +23,17 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            constraints/ci.txt
+      - run: python -m pip install --upgrade "pip==26.1.2"
       - run: python -m pip install -e ".[dev]"
+      - name: Environment diagnostics
+        run: |
+          python -VV
+          python -m pip --version
+          python -m pytest --version
+          python -m pip freeze --all
       - name: Build (wheel contract tests need dist/)
         run: python -m build
       - name: Ruff
@@ -72,7 +86,17 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            constraints/ci.txt
+      - run: python -m pip install --upgrade "pip==26.1.2"
       - run: python -m pip install -e ".[dev]"
+      - name: Environment diagnostics
+        run: |
+          python -VV
+          python -m pip --version
+          python -m pytest --version
+          python -m pip freeze --all
       - name: Build (wheel contract tests need dist/)
         run: python -m build
       - name: Unit, integration, contract, and e2e tests
@@ -87,7 +111,17 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            constraints/ci.txt
+      - run: python -m pip install --upgrade "pip==26.1.2"
       - run: python -m pip install -e ".[dev]"
+      - name: Environment diagnostics
+        run: |
+          python -VV
+          python -m pip --version
+          python -m pytest --version
+          python -m pip freeze --all
       - name: Build wheel and sdist
         run: python -m build
       - run: python -m twine check dist/*.whl dist/*.tar.gz
