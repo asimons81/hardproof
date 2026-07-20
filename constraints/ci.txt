@@ -79,7 +79,7 @@ rich==15.0.0
 rpds-py==2026.6.3
 ruff==0.15.22
 SecretStorage==3.5.0
-setuptools==82.0.1
+setuptools==83.0.0
 six==1.17.0
 sortedcontainers==2.4.0
 tomli==2.4.1
