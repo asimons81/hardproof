@@ -75,7 +75,7 @@ rfc3986-validator==0.1.1
 rfc3987-syntax==1.1.0
 rich==15.0.0
 rpds-py==2026.6.3
-ruff==0.15.22
+ruff==0.16.0
 SecretStorage==3.5.0
 setuptools==83.0.0
 six==1.17.0
