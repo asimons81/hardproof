@@ -82,7 +82,7 @@ six==1.17.0
 sortedcontainers==2.4.0
 tomli==2.4.1
 tomli_w==1.2.0
-twine==6.2.0
+twine==7.0.0
 types-PyYAML==6.0.12.20260724
 typing_extensions==4.16.0
 tzdata==2026.3
