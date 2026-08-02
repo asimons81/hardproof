@@ -9,13 +9,13 @@ All notable changes to Hardproof are documented here.
 Hardproof reaches v1.0.0. The release consolidates the v0.4.0–v1.0.0 arc: Challenge Chamber review discipline, workspace isolation, tempering/learning approvals, the Control Room surface, the Protocol SDK freeze, and the hardening rehearsal. 504 tests pass (4 skipped: symlink/Windows-only cases).
 
 - **Challenge Chamber (v0.4.0).** Independent specialized reviewers, severity classification, fix/re-review loop, disagreement escalation and waivers, evidence packages, and a final whole-run review. New: `services/review_dispatch.py`, `services/fix_re_review.py`, `services/waivers.py`.
-- **Isolation (v0.5.0).** Branch/worktree providers, baseline proof, rollback/export/cleanup, orphan detection, and Docker/SSH/Daytona/Modal adapters. New: `hardproof/isolation/` with `guard.py` (workspace isolation guard, symlink-proof) and `adapters.py`.
+- **Isolation (v0.5.0).** Branch/worktree providers, baseline proof, rollback/export/cleanup, orphan detection, and Docker/SSH/Daytona/Modal adapters. New: `hardproof/isolation/` with `guard.py` (cross-profile write guard) and `adapters.py`. NOTE: guard is a minimal path-based check; symlink-hardening is not yet implemented.
 - **Tempering (v0.6.0).** Human-approved, provenance-linked learning proposals with secret/privacy filtering, duplicate/contradiction detection, quality evaluation, and correction/revocation history. New: `services/approvals.py`, `hardproof/kanban/approvals.py` (kanban approval gates).
 - **Control Room (v0.7.0).** Cross-surface continuity, timeline, notifications, and optional local dashboard.
 - **Protocol SDK (v0.8.0).** Frozen documented policy, validator, evidence, report, and extension interfaces; extension manifest and schema versioning; policy provider API.
 - **Hardening (v0.9.0).** Rehearsed migrations, recovery, concurrency, performance, security, Windows, gateway, and compatibility scenarios. New: `tests/hardening/`.
 - **Proof Matrix (v1.0.0).** Stable public contracts validated across representative Standard and Critical workflows. New: `tests/e2e/test_standard_workflow.py`, `tests/e2e/isolation/`.
-- **Kanban integration.** New `hardproof/kanban/worker.py` WorktreeProvider for isolated per-task worktrees; `hardproof/vault/lease.py` for credential lease integration; `services/packages.py` for package/dependency verification.
+- **Kanban integration.** New `hardproof/kanban/worker.py` WorktreeProvider for isolated per-task worktrees; `hardproof/vault/lease.py` (env-var credential client; hermes-vault MCP integration is a documented placeholder); `services/packages.py` for package/dependency verification.
 - **Version contract.** All version surfaces (pyproject, plugin.yaml, package `__version__`, contract tests) synced to 1.0.0.
 
 ## [0.3.1] - 2026-07-12
