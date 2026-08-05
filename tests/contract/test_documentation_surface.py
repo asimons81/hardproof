@@ -37,21 +37,28 @@ class TestAgentsFiles:
 class TestReadmeCurrentRelease:
     """README must correctly identify the current release."""
 
-    def test_readme_refers_to_v030(self) -> None:
+    def test_readme_refers_to_v100(self) -> None:
         readme = REPO_ROOT / "README.md"
         text = readme.read_text(encoding="utf-8")
-        assert "v0.3.0 Workcells" in text, "README must reference v0.3.0 as current release"
+        assert "v1.0.0 Proven" in text, "README must reference v1.0.0 Proven as current release"
+        assert "is the current public release" in text, (
+            "README must describe v1.0.0 as the current public release"
+        )
 
-    def test_v040_planned_not_started(self) -> None:
-        """v0.4.0 must be described as planned/not started."""
+    def test_no_alpha_banner_for_current_release(self) -> None:
+        """v1.0.0 is stable; the README must not ship an alpha banner."""
         readme = REPO_ROOT / "README.md"
         text = readme.read_text(encoding="utf-8")
-        idx = text.find("v0.4.0")
-        if idx >= 0:
-            context = text[idx:idx + 120]
-            assert "not started" in context or "planned" in context or "has not begun" in context, (
-                f"v0.4.0 reference in README must say 'not started' or 'planned': {context}"
-            )
+        assert "Alpha software" not in text, "README must not call the current release alpha"
+
+    def test_readme_current_release_table_has_v100_on_top(self) -> None:
+        readme = REPO_ROOT / "README.md"
+        text = readme.read_text(encoding="utf-8")
+        table = text.split("## Current Release", 1)[1]
+        first_row = table.splitlines()[2]
+        assert first_row.startswith("| Current | v1.0.0 Proven"), (
+            f"Current Release table must list v1.0.0 as current: {first_row}"
+        )
 
 
 class TestNoAbsolutePaths:

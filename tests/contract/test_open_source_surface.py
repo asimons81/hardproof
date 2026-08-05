@@ -22,7 +22,7 @@ def test_required_open_source_files_exist_and_are_nontrivial() -> None:
 def test_readme_covers_product_and_operator_contract() -> None:
     text = (ROOT / "README.md").read_text(encoding="utf-8").lower()
     for phrase in (
-        "alpha", "install", "enable", "quick start", "profiles", "architecture",
+        "install", "enable", "quick start", "profiles", "architecture",
         "security boundary", "privacy", "roadmap", "contributing", "apache-2.0",
     ):
         assert phrase in text, f"Missing '{phrase}' in README"

@@ -1,12 +1,12 @@
 # Hardproof Codex Status
 
-- Current release: v0.3.0 Workcells (built and pending merge)
+- Current release: v1.0.0 Proven (released on GitHub and PyPI)
 - Documentation and repository hygiene: complete
 - Dependency PR review: complete
 - Open pull requests: zero
 - Main CI: all green
-- Workcells implementation: complete on `codex/v0.3.0-workcells`
-- Current version: 0.3.0
-- v0.4.0 Challenge Chamber: not started
-- Repository readiness: v0.3.0 ready for pull request and merge
-- Last updated: 2026-07-12
+- Proven implementation: complete on `main`
+- Current version: 1.0.0
+- Next release: not scheduled
+- Repository readiness: v1.0.0 released
+- Last updated: 2026-08-05

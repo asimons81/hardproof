@@ -6,7 +6,7 @@ import hashlib
 import json
 import tarfile
 import zipfile
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -84,6 +84,6 @@ class EvidencePackageBuilder:
         digest = hashlib.sha256(archive_path.read_bytes()).hexdigest()
         manifest = PackageManifest(run_id, format, files_added, total_bytes, digest)
         manifest_path = self.run_directory / f"evidence-{run_id}.manifest.json"
-        manifest_path.write_text(json.dumps(manifest.__dict__, indent=2) + "\n", encoding="utf-8")
+        manifest_path.write_text(json.dumps(asdict(manifest), indent=2) + "\n", encoding="utf-8")
 
         return archive_path, manifest
