@@ -2,7 +2,18 @@
 
 All notable changes to Hardproof are documented here.
 
-## [1.0.0] - 2026-08-02
+## [1.0.1] - 2026-08-05
+
+### Fixed — post-release contract corrections
+
+v1.0.1 is a maintenance patch carrying the REP-01 corrections found after the v1.0.0 release. It does not change Hardproof's protocol contracts or persistence model.
+
+- **CLI output.** The `hermes hardproof` adapter now prints successful output to stdout, sends errors to stderr, and returns a non-zero exit code for command failures.
+- **CLI migration parity.** Added the documented `hermes hardproof migrate-state` subcommand to the terminal CLI surface.
+- **Stable package metadata.** The package now advertises `Development Status :: 5 - Production/Stable`, matching the v1.x public release.
+- **Current-status documentation.** Version surfaces and operator status pages now identify v1.0.1 as the current public release while preserving v1.0.0 historical records.
+
+
 
 ### Proven — stable public contracts
 

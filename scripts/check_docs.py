@@ -65,7 +65,7 @@ AGENTS_MAX_CHARS = 14_000
 AGENTS_MIN_CHARS = 8_000
 
 # Current-release identity that the root AGENTS.md must state
-CURRENT_RELEASE_IDENTITY = "v1.0.0 Proven"
+CURRENT_RELEASE_IDENTITY = "v1.0.1 Proven"
 
 # Docs index that must list every tracked document (except the index itself
 # and the docs-local AGENTS.md)
@@ -203,8 +203,8 @@ def check_readme_current_release() -> list[str]:
     if "## Current Release" in text:
         table = text.split("## Current Release", 1)[1]
         rows = [line for line in table.splitlines() if line.startswith("|")]
-        if rows and not rows[0].startswith("| Current | v1.0.0"):
-            errors.append(f"Current Release table must list v1.0.0 as current: {rows[0]}")
+        if rows and not rows[0].startswith("| Current | v1.0.1"):
+            errors.append(f"Current Release table must list v1.0.1 as current: {rows[0]}")
     return errors
 
 

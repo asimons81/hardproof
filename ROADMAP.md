@@ -12,6 +12,7 @@ Hardproof ships by evidence gates rather than dates.
 - v0.7.0 (released) Control Room adds cross-surface continuity, timeline, notifications, and an optional local dashboard.
 - v0.8.0 (released) Protocol SDK freezes documented policy, validator, evidence, report, and extension interfaces.
 - v0.9.0 (released) Hardening rehearses all migrations, recovery, concurrency, performance, security, Windows, gateway, and compatibility scenarios.
-- v1.0.0 (released, current) Proven freezes stable public contracts and validates representative Standard and Critical workflows across multiple repositories, operating systems, and execution backends.
+- v1.0.0 (released) Proven freezes stable public contracts and validates representative Standard and Critical workflows across multiple repositories, operating systems, and execution backends.
+- v1.0.1 (released, current) Proven maintenance patch corrects CLI output, CLI migration parity, and stable package metadata without changing protocol contracts.
 
 Every release produces its own specification, migration and compatibility evidence, security summary, package artifacts, checksums, SBOM, and release report before the next release advances.
