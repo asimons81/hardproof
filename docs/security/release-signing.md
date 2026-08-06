@@ -14,7 +14,8 @@ Current approved release signers:
 
 | Identity | Key type | Fingerprint |
 |----------|----------|-------------|
-| asimons81@gmail.com (Tony Simons) | ssh-ed25519 | SHA256:dH1TlK+IE0sRzSrdlhVMwk/sPqJRaeSNO825IlKsBCY |
+| asimons81@gmail.com (Tony Simons) — Arch GEEKOM | ssh-ed25519 | SHA256:E9iKLZWWGrEubSWpyVhbLnuGoekHI+LIxfFQzR5O2Ko |
+| asimons81@gmail.com (Tony Simons) — legacy TONY-LAPTOP (kept for historical tag verification) | ssh-ed25519 | SHA256:dH1TlK+IE0sRzSrdlhVMwk/sPqJRaeSNO825IlKsBCY |
 
 The public key is stored in `.github/release-signers` in Git allowed-signers format.
 
