@@ -208,6 +208,11 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md), [GOVERNANCE.md](GOVERNANCE.md), a
 | v0.3.0 | Workcells | Dependency-aware task waves, resumable subagent implementers |
 | v0.4.0 | Challenge Chamber | Independent specialized reviewers, severity, fix/re-review loops |
 | v0.5.0 | Isolation | Branches, worktrees, baseline proof, rollback, backend adapters |
+| v0.6.0 | Tempering | Human-approved, provenance-linked learning proposals |
+| v0.7.0 | Control Room | Cross-surface continuity, timeline, notifications, optional local dashboard |
+| v0.8.0 | Protocol SDK | Frozen policy, validator, evidence, report, and extension interfaces |
+| v0.9.0 | Hardening | Migration, recovery, concurrency, performance, security, Windows, gateway, compatibility rehearsal |
+| v1.0.0 (current) | Proven | Stable public contracts; Standard and Critical workflows validated across OSes and backends |
 
 Full roadmap: [ROADMAP.md](ROADMAP.md).
 

@@ -18,7 +18,8 @@ class TestAgentsFiles:
         "tests/AGENTS.md",
         "docs/AGENTS.md",
     ]
-    MAX_CHARS = 16_000
+    MAX_CHARS = 14_000
+    ROOT_MIN_CHARS = 8_000
 
     @pytest.mark.parametrize("rel_path", AGENTS_PATHS)
     def test_agents_file_exists(self, rel_path: str) -> None:
@@ -30,8 +31,26 @@ class TestAgentsFiles:
         full = REPO_ROOT / rel_path
         if not full.exists():
             pytest.skip(f"{rel_path} not found")
-        size = full.stat().st_size
-        assert size <= self.MAX_CHARS, f"{rel_path} is {size} bytes (max {self.MAX_CHARS})"
+        # Measure characters, not bytes, so CRLF checkouts on Windows do not
+        # inflate the size past the limit.
+        size = len(full.read_text(encoding="utf-8", errors="replace"))
+        assert size <= self.MAX_CHARS, f"{rel_path} is {size} chars (max {self.MAX_CHARS})"
+
+    def test_root_agents_file_min_size(self) -> None:
+        full = REPO_ROOT / "AGENTS.md"
+        if not full.exists():
+            pytest.skip("AGENTS.md not found")
+        size = len(full.read_text(encoding="utf-8", errors="replace"))
+        assert size >= self.ROOT_MIN_CHARS, (
+            f"Root AGENTS.md is {size} chars (min {self.ROOT_MIN_CHARS})"
+        )
+
+    def test_root_agents_identifies_current_release(self) -> None:
+        full = REPO_ROOT / "AGENTS.md"
+        if not full.exists():
+            pytest.skip("AGENTS.md not found")
+        text = full.read_text(encoding="utf-8")
+        assert "v1.0.0 Proven" in text, "Root AGENTS.md must state v1.0.0 Proven as current release"
 
 
 class TestReadmeCurrentRelease:
@@ -93,17 +112,18 @@ class TestNoAbsolutePaths:
                 pytest.fail(f"Absolute path '{pattern}' found in {rel}")
 
 
-@pytest.mark.skip(reason="Check docs/README.md has no stale release-candidate status in current docs")
 class TestNoStaleStatusPhrases:
     """Current-status docs should not use pre-release language for published releases."""
 
-    # Historical release docs are exempt
+    # Historical release docs and process records are exempt
     HISTORICAL = [
         "CHANGELOG.md",
         "ROADMAP.md",
         "docs/release/",
         "docs/rebrand/",
         "docs/plans/",
+        "docs/codex/",
+        "docs/maintenance/",
     ]
     STALE = [
         "release candidate",
@@ -111,16 +131,20 @@ class TestNoStaleStatusPhrases:
         "publication pending",
         "v0.2.0 not published",
         "v0.2.0 development",
+        "current public release: v0.3.1",
+        "current development boundary: v0.4.0",
+        "current development task: v0.4.0",
+        "next planned product release: v0.4.0",
     ]
 
     def test_check_stale_phrases(self) -> None:
         for md_file in REPO_ROOT.rglob("*.md"):
             if ".git" in md_file.parts:
                 continue
-            rel = str(md_file.relative_to(REPO_ROOT))
+            rel = str(md_file.relative_to(REPO_ROOT)).replace("\\", "/")
             if any(rel.startswith(h) for h in self.HISTORICAL):
                 continue
-            text = md_file.read_text(encoding="utf-8")
+            text = md_file.read_text(encoding="utf-8", errors="replace")
             for phrase in self.STALE:
                 if phrase.lower() in text.lower():
                     pytest.fail(f"Stale phrase '{phrase}' in {rel}")

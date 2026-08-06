@@ -3,7 +3,7 @@
 ## Current vs Historical Documents
 
 - Files under `docs/release/` are historical release evidence — do not rewrite them to make them look current. They truthfully record what the state was at release time.
-- Files under `docs/plans/` are implementation plans — their status headers should reflect current reality (v0.2.0 plans should show it's published; v0.3.0 plans, if any, should show they haven't started).
+- Files under `docs/plans/` are implementation plans — their status headers should reflect current reality (v0.2.0 and v0.3.0 plans show those releases as published).
 - `STATUS.md`, `README.md`, `docs/codex/STATUS.md` describe current public reality and must be updated when the release state changes.
 - `ROADMAP.md` describes future plans — released versions should be marked as released, not as "unpublished" or "in development."
 

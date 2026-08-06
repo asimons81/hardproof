@@ -40,6 +40,8 @@ jobs:
         run: python -m ruff check hardproof tests scripts
       - name: mypy
         run: python -m mypy hardproof
+      - name: Documentation validation
+        run: python scripts/check_docs.py
       - name: Coverage
         run: python -m pytest --cov=hardproof --cov-report=xml --cov-report=term-missing --cov-fail-under=90
       - name: Critical module coverage

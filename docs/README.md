@@ -8,6 +8,7 @@
 | [docs/hermes-agent-guide.md](hermes-agent-guide.md) | Hermes Agent operators guide |
 | [docs/examples/first-run.md](examples/first-run.md) | First-run walkthrough |
 | [docs/development.md](development.md) | Development environment |
+| [docs/testing.md](testing.md) | Testing workflow |
 
 ## Using Hardproof
 
@@ -34,7 +35,7 @@
 |----------|-------------|
 | [docs/configuration-and-migrations.md](configuration-and-migrations.md) | Policy configuration and migration |
 | [docs/policy-packs.md](policy-packs.md) | Built-in language policy packs |
-| [docs/specs/v0.2.0-gatehouse.md](../docs/specs/v0.2.0-gatehouse.md) | Gatehouse specification |
+| [docs/specs/v0.2.0-gatehouse.md](specs/v0.2.0-gatehouse.md) | Gatehouse specification |
 | [docs/specs/v0.3.0-workcells.md](specs/v0.3.0-workcells.md) | Workcells specification |
 | [docs/research/hermes-child-session-api-v0.3.0.md](research/hermes-child-session-api-v0.3.0.md) | Public Hermes child-session compatibility research |
 
@@ -46,10 +47,25 @@
 | [ROADMAP.md](../ROADMAP.md) | Roadmap |
 | [STATUS.md](../STATUS.md) | Current release status |
 | [docs/releasing.md](releasing.md) | Release process |
-| [docs/release/hardproof-v0.2.0-independent-audit.md](release/hardproof-v0.2.0-independent-audit.md) | v0.2.0 independent audit |
-| [docs/release/hardproof-v0.2.0-security-review.md](release/hardproof-v0.2.0-security-review.md) | v0.2.0 security review |
+| [docs/release/hardproof-independent-audit.md](release/hardproof-independent-audit.md) | Independent audit |
+| [docs/release/hardproof-v0.1.0-compatibility.md](release/hardproof-v0.1.0-compatibility.md) | v0.1.0 compatibility evidence |
+| [docs/release/hardproof-v0.1.0-installation-test.md](release/hardproof-v0.1.0-installation-test.md) | v0.1.0 installation test |
+| [docs/release/hardproof-v0.1.0-publication-report.md](release/hardproof-v0.1.0-publication-report.md) | v0.1.0 publication report |
+| [docs/release/hardproof-v0.1.0-release-candidate.md](release/hardproof-v0.1.0-release-candidate.md) | v0.1.0 pre-release evidence |
+| [docs/release/hardproof-v0.1.0-security-review.md](release/hardproof-v0.1.0-security-review.md) | v0.1.0 security review |
+| [docs/release/hardproof-v0.1.1-release-candidate.md](release/hardproof-v0.1.1-release-candidate.md) | v0.1.1 pre-release evidence |
 | [docs/release/hardproof-v0.2.0-compatibility.md](release/hardproof-v0.2.0-compatibility.md) | v0.2.0 compatibility evidence |
+| [docs/release/hardproof-v0.2.0-independent-audit.md](release/hardproof-v0.2.0-independent-audit.md) | v0.2.0 independent audit |
 | [docs/release/hardproof-v0.2.0-installation-test.md](release/hardproof-v0.2.0-installation-test.md) | v0.2.0 installation test |
+| [docs/release/hardproof-v0.2.0-live-upgrade-rehearsal.md](release/hardproof-v0.2.0-live-upgrade-rehearsal.md) | v0.2.0 live upgrade rehearsal |
+| [docs/release/hardproof-v0.2.0-migration-report.md](release/hardproof-v0.2.0-migration-report.md) | v0.2.0 migration report |
+| [docs/release/hardproof-v0.2.0-publication-integration.md](release/hardproof-v0.2.0-publication-integration.md) | v0.2.0 publication integration |
+| [docs/release/hardproof-v0.2.0-release-candidate.md](release/hardproof-v0.2.0-release-candidate.md) | v0.2.0 pre-release evidence |
+| [docs/release/hardproof-v0.2.0-security-review.md](release/hardproof-v0.2.0-security-review.md) | v0.2.0 security review |
+| [docs/release/hardproof-v0.3.1-independent-audit.md](release/hardproof-v0.3.1-independent-audit.md) | v0.3.1 independent audit |
+| [docs/release/hardproof-v0.3.1-publication-report.md](release/hardproof-v0.3.1-publication-report.md) | v0.3.1 publication report |
+| [docs/release/public-alpha-secret-scan.md](release/public-alpha-secret-scan.md) | Public alpha secret scan |
+| [docs/release/v0.1.1-release-recovery-plan.md](release/v0.1.1-release-recovery-plan.md) | v0.1.1 release recovery plan |
 
 ## Security
 
@@ -94,3 +110,23 @@
 | [docs/rebrand/hardproof-residual-name-audit.md](rebrand/hardproof-residual-name-audit.md) | Residual name audit |
 | [docs/plans/v0.2.0-implementation.md](plans/v0.2.0-implementation.md) | v0.2.0 implementation plan (historical) |
 | [docs/plans/v0.2.0-remaining-work.md](plans/v0.2.0-remaining-work.md) | v0.2.0 remaining work (historical at completion) |
+| [docs/plans/v0.3.0-implementation.md](plans/v0.3.0-implementation.md) | v0.3.0 implementation plan (historical) |
+| [docs/plans/v0.8/SDK-03-policy-provider-api.md](plans/v0.8/SDK-03-policy-provider-api.md) | v0.8.0 policy provider API design (historical) |
+| [docs/maintenance/dependency-pr-readiness-v0.3.0.md](maintenance/dependency-pr-readiness-v0.3.0.md) | v0.3.0 dependency PR readiness (historical) |
+| [docs/maintenance/v0.2.0-docs-and-hygiene-audit.md](maintenance/v0.2.0-docs-and-hygiene-audit.md) | v0.2.0 docs and hygiene audit (historical) |
+| [docs/maintenance/v0.3.0-entry-readiness.md](maintenance/v0.3.0-entry-readiness.md) | v0.3.0 entry readiness (historical) |
+| [docs/maintenance/v0.4.0-entry-readiness.md](maintenance/v0.4.0-entry-readiness.md) | v0.4.0 entry readiness (historical) |
+| [docs/codex/STATUS.md](codex/STATUS.md) | Codex status (current) |
+| [docs/codex/GOAL.md](codex/GOAL.md) | Codex goal (historical) |
+| [docs/codex/DECISIONS.md](codex/DECISIONS.md) | Codex decisions (historical) |
+| [docs/codex/RISKS.md](codex/RISKS.md) | Codex risks (historical) |
+| [docs/codex/releases/v0.1.0.md](codex/releases/v0.1.0.md) | v0.1.0 release ledger (historical) |
+| [docs/codex/releases/v0.2.0.md](codex/releases/v0.2.0.md) | v0.2.0 release ledger (historical) |
+| [docs/codex/releases/v0.3.0.md](codex/releases/v0.3.0.md) | v0.3.0 release ledger (historical) |
+| [docs/codex/releases/v0.4.0.md](codex/releases/v0.4.0.md) | v0.4.0 release ledger (historical) |
+| [docs/codex/releases/v0.5.0.md](codex/releases/v0.5.0.md) | v0.5.0 release ledger (historical) |
+| [docs/codex/releases/v0.6.0.md](codex/releases/v0.6.0.md) | v0.6.0 release ledger (historical) |
+| [docs/codex/releases/v0.7.0.md](codex/releases/v0.7.0.md) | v0.7.0 release ledger (historical) |
+| [docs/codex/releases/v0.8.0.md](codex/releases/v0.8.0.md) | v0.8.0 release ledger (historical) |
+| [docs/codex/releases/v0.9.0.md](codex/releases/v0.9.0.md) | v0.9.0 release ledger (historical) |
+| [docs/codex/releases/v1.0.0.md](codex/releases/v1.0.0.md) | v1.0.0 release ledger (historical) |
