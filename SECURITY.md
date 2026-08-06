@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Until v1.0.0, security fixes target the newest published minor release. Maintainers may provide a migration rather than backport a fix when pre-1.0 protocol behavior changes.
+Security fixes target the newest published patch release in the v1.x series. Maintainers may provide a migration rather than backport a fix when pre-1.0 protocol behavior changes.
 
 ## Reporting a vulnerability
 
