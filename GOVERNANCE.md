@@ -1,6 +1,6 @@
 # Governance
 
-Hardproof is maintainer-led through v1.0.0. Maintainers set release scope, review contributions, enforce security and conduct policy, and are accountable for evidence-backed releases.
+Hardproof is maintainer-led through v1.0.1. Maintainers set release scope, review contributions, enforce security and conduct policy, and are accountable for evidence-backed releases.
 
 Public issues and discussions are the default decision forum. Accepted consequential decisions are recorded as ADRs. Breaking protocol changes require an RFC issue with motivation, compatibility impact, migration plan, security analysis, alternatives, and rollout evidence.
 

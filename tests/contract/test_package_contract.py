@@ -16,7 +16,7 @@ def test_version_metadata_matches_manifest() -> None:
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     manifest = yaml.safe_load((ROOT / "plugin.yaml").read_text(encoding="utf-8"))
     package = importlib.import_module("hardproof")
-    assert metadata["project"]["version"] == "1.0.0"
+    assert metadata["project"]["version"] == "1.0.1"
     assert metadata["project"]["version"] == manifest["version"] == package.__version__
 
 
@@ -29,7 +29,7 @@ def test_entry_point_and_root_wrapper_resolve() -> None:
 
 
 def test_pypi_classifier_declares_production_stable() -> None:
-    """P2-2 regression: v1.0.0 is stable; PyPI metadata must not claim Alpha."""
+    """P2-2 regression: v1.0.1 is stable; PyPI metadata must not claim Alpha."""
     import tomllib
 
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))

@@ -5,8 +5,8 @@ This file loads as project context when Hermes Agent starts in the Hardproof rep
 ## Project Identity
 
 - **Hardproof** is a persistent, risk-aware engineering protocol for Hermes Agent.
-- **Current public release:** v1.0.0 Proven (PyPI, GitHub).
-- **Current development boundary:** none scheduled; the v0.4.0–v1.0.0 arc is released.
+- **Current public release:** v1.0.1 Proven (PyPI, GitHub).
+- **Current development boundary:** none scheduled; the v0.4.0–v1.0.1 arc is released.
 - Hardproof is a standalone Hermes plugin discovered through the `hermes_agent.plugins` entry-point group.
 - It uses only public Hermes registration, hook, command, skill, and dispatch APIs.
 - The plugin remains opt-in. Hardproof does not modify Hermes core files.

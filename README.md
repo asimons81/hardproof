@@ -7,7 +7,7 @@
 [![PyPI](https://img.shields.io/pypi/v/hardproof)](https://pypi.org/project/hardproof/)
 [![X Follow](https://img.shields.io/twitter/follow/tonysimons_?style=social)](https://x.com/tonysimons_)
 
-> **v1.0.0 Proven is the current public release on PyPI.** Stable public contracts; representative Standard and Critical workflows validated across repositories, operating systems, and execution backends.
+> **v1.0.1 Proven is the current public release on PyPI.** Stable public contracts; representative Standard and Critical workflows validated across repositories, operating systems, and execution backends.
 
 Hardproof gives coding agents a persistent, risk-aware engineering process that turns ambiguous software requests into reviewed, verified results while preserving the evidence behind every completion claim.
 
@@ -15,7 +15,7 @@ Hardproof gives coding agents a persistent, risk-aware engineering process that 
 
 ## Current Release
 
-| Current | v1.0.0 Proven | Released on GitHub and PyPI |
+| Current | v1.0.1 Proven | Released on GitHub and PyPI |
 | Previous | v0.3.1 Workcells Hardening | Released on GitHub and PyPI |
 | Previous | v0.3.0 Workcells | Released on GitHub and PyPI |
 | Previous | v0.2.0 Gatehouse | Released on GitHub and PyPI |
@@ -212,7 +212,7 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md), [GOVERNANCE.md](GOVERNANCE.md), a
 | v0.7.0 | Control Room | Cross-surface continuity, timeline, notifications, optional local dashboard |
 | v0.8.0 | Protocol SDK | Frozen policy, validator, evidence, report, and extension interfaces |
 | v0.9.0 | Hardening | Migration, recovery, concurrency, performance, security, Windows, gateway, compatibility rehearsal |
-| v1.0.0 (current) | Proven | Stable public contracts; Standard and Critical workflows validated across OSes and backends |
+| v1.0.1 (current) | Proven | Stable public contracts; Standard and Critical workflows validated across OSes and backends |
 
 Full roadmap: [ROADMAP.md](ROADMAP.md).
 

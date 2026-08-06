@@ -50,33 +50,33 @@ class TestAgentsFiles:
         if not full.exists():
             pytest.skip("AGENTS.md not found")
         text = full.read_text(encoding="utf-8")
-        assert "v1.0.0 Proven" in text, "Root AGENTS.md must state v1.0.0 Proven as current release"
+        assert "v1.0.1 Proven" in text, "Root AGENTS.md must state v1.0.1 Proven as current release"
 
 
 class TestReadmeCurrentRelease:
     """README must correctly identify the current release."""
 
-    def test_readme_refers_to_v100(self) -> None:
+    def test_readme_refers_to_v101(self) -> None:
         readme = REPO_ROOT / "README.md"
         text = readme.read_text(encoding="utf-8")
-        assert "v1.0.0 Proven" in text, "README must reference v1.0.0 Proven as current release"
+        assert "v1.0.1 Proven" in text, "README must reference v1.0.1 Proven as current release"
         assert "is the current public release" in text, (
-            "README must describe v1.0.0 as the current public release"
+            "README must describe v1.0.1 as the current public release"
         )
 
     def test_no_alpha_banner_for_current_release(self) -> None:
-        """v1.0.0 is stable; the README must not ship an alpha banner."""
+        """v1.0.1 is stable; the README must not ship an alpha banner."""
         readme = REPO_ROOT / "README.md"
         text = readme.read_text(encoding="utf-8")
         assert "Alpha software" not in text, "README must not call the current release alpha"
 
-    def test_readme_current_release_table_has_v100_on_top(self) -> None:
+    def test_readme_current_release_table_has_v101_on_top(self) -> None:
         readme = REPO_ROOT / "README.md"
         text = readme.read_text(encoding="utf-8")
         table = text.split("## Current Release", 1)[1]
         first_row = table.splitlines()[2]
-        assert first_row.startswith("| Current | v1.0.0 Proven"), (
-            f"Current Release table must list v1.0.0 as current: {first_row}"
+        assert first_row.startswith("| Current | v1.0.1 Proven"), (
+            f"Current Release table must list v1.0.1 as current: {first_row}"
         )
 
 
