@@ -108,7 +108,7 @@ hermes hardproof start quick|standard|critical "request"
 hermes hardproof status
 hermes hardproof doctor
 hermes hardproof approve design|plan|completion [reason]
-hermes hardproof waive <reason>
+hermes hardproof waive <gate> <reason>
 hermes hardproof pause [reason]
 hermes hardproof resume [run-id]
 hermes hardproof abort <reason>

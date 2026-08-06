@@ -9,7 +9,7 @@
 
 ## Version and Release Truth
 
-- v0.1.0, v0.1.1, v0.2.0, v0.3.0, v0.3.1, and v1.0.0 are published. Do not write about them as if they are pending, unreleased, or in release-candidate status.
+- v0.1.0, v0.1.1, v0.2.0, v0.3.0, v0.3.1, v0.4.0, v0.5.0, v0.6.0, v0.7.0, v0.8.0, v0.9.0, and v1.0.0 are published. Do not write about them as if they are pending, unreleased, or in release-candidate status.
 - v1.0.0 is the current public release. The next release is not yet scheduled.
 - Historical docs that reference a pre-release state for a now-published release should be updated at the top-level status line but the remainder of the document may remain if it is a faithful historical record.
 
