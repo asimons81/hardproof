@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from typing import Any, Callable
 
 from hardproof.commands.shared import CommandService
@@ -60,6 +61,7 @@ def _configure(parser: argparse.ArgumentParser) -> None:
     policy = sub.add_parser("policy")
     policy.add_argument("policy_args", nargs=argparse.REMAINDER)
     sub.add_parser("complete")
+    sub.add_parser("migrate-state")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -111,8 +113,13 @@ def run_cli(
 
 
 def register_cli(ctx: Any, service_factory: Callable[[], CommandService]) -> None:
-    def handler(args: argparse.Namespace) -> str:
-        return run_cli(args, service_factory=service_factory)
+    def handler(args: argparse.Namespace) -> int:
+        text = run_cli(args, service_factory=service_factory)
+        if text.startswith("Hardproof error:"):
+            print(text, file=sys.stderr)
+            return 1
+        print(text)
+        return 0
 
     ctx.register_cli_command(
         "hardproof",

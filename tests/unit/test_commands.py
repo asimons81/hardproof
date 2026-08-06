@@ -149,6 +149,7 @@ def test_slash_and_cli_use_same_command_service_output(tmp_path: Path) -> None:
         ["waive", "gate", "reason"], ["pause"], ["resume"], ["abort", "reason"],
         ["evidence"], ["export"], ["doctor"], ["runs"], ["show", "run-id"],
         ["config", "init"], ["config", "validate"], ["db", "migrate"], ["complete"],
+        ["migrate-state"],
         ["config", "explain"], ["db", "status"], ["db", "migrate", "--dry-run"],
         ["policy", "waivers", "list"],
         ["policy", "explain", "--tool", "terminal", "--args-json", "{}"],
@@ -164,6 +165,16 @@ def test_slash_and_cli_use_same_command_service_output(tmp_path: Path) -> None:
 def test_cli_parser_accepts_every_documented_subcommand(argv: list[str]) -> None:
     namespace = build_parser().parse_args(argv)
     assert isinstance(namespace, argparse.Namespace)
+
+
+def test_cli_migrate_state_round_trips_to_shared_handler(tmp_path: Path) -> None:
+    """P2-3 regression: `migrate-state` must be a real CLI subcommand that
+    dispatches to the shared handler instead of failing with invalid choice."""
+    cli_output = run_cli(
+        build_parser().parse_args(["migrate-state"]),
+        service_factory=lambda: CommandService(context(tmp_path, source="cli")),
+    )
+    assert "No pre-rename state directory found" in cli_output
 
 
 @pytest.mark.parametrize("raw", ["", "unknown", 'start standard "unterminated'])

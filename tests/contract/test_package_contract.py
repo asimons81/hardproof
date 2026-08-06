@@ -28,6 +28,16 @@ def test_entry_point_and_root_wrapper_resolve() -> None:
     assert root_wrapper.register is plugin.register
 
 
+def test_pypi_classifier_declares_production_stable() -> None:
+    """P2-2 regression: v1.0.0 is stable; PyPI metadata must not claim Alpha."""
+    import tomllib
+
+    metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    classifiers = metadata["project"]["classifiers"]
+    assert "Development Status :: 5 - Production/Stable" in classifiers
+    assert "Development Status :: 3 - Alpha" not in classifiers
+
+
 def test_built_wheel_contains_required_package_data() -> None:
     wheels = sorted((ROOT / "dist").glob("*.whl"))
     assert wheels, "build the wheel before running this contract"
