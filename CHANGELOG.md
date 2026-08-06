@@ -13,7 +13,7 @@ v1.0.1 is a maintenance patch carrying the REP-01 corrections found after the v1
 - **Stable package metadata.** The package now advertises `Development Status :: 5 - Production/Stable`, matching the v1.x public release.
 - **Current-status documentation.** Version surfaces and operator status pages now identify v1.0.1 as the current public release while preserving v1.0.0 historical records.
 
-
+## [1.0.0] - 2026-08-02
 
 ### Proven — stable public contracts
 
