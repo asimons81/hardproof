@@ -6,7 +6,7 @@ All notable changes to Hardproof are documented here.
 
 ### Proven — stable public contracts
 
-Hardproof reaches v1.0.0. The release consolidates the v0.4.0–v1.0.0 arc: Challenge Chamber review discipline, workspace isolation, tempering/learning approvals, the Control Room surface, the Protocol SDK freeze, and the hardening rehearsal. 504 tests pass (4 skipped: symlink/Windows-only cases).
+Hardproof reaches v1.0.0. The release consolidates the v0.4.0–v1.0.0 arc: Challenge Chamber review discipline, workspace isolation, tempering/learning approvals, the Control Room surface, the Protocol SDK freeze, and the hardening rehearsal. 532 tests pass (3 skipped: Hermes-runtime integration contracts that require a live `hermes_cli`).
 
 - **Challenge Chamber (v0.4.0).** Independent specialized reviewers, severity classification, fix/re-review loop, disagreement escalation and waivers, evidence packages, and a final whole-run review. New: `services/review_dispatch.py`, `services/fix_re_review.py`, `services/waivers.py`.
 - **Isolation (v0.5.0).** Branch/worktree providers, baseline proof, rollback/export/cleanup, orphan detection, and Docker/SSH/Daytona/Modal adapters. New: `hardproof/isolation/` with `guard.py` (cross-profile write guard) and `adapters.py`. NOTE: guard is a minimal path-based check; symlink-hardening is not yet implemented.

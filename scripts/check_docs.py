@@ -6,10 +6,12 @@ Checks:
 - Internal Markdown links resolve
 - Referenced local files exist
 - Root and nested AGENTS.md exist
-- Agent-file size limits
+- Agent-file size limits (root 8,000-14,000 chars)
+- Root AGENTS.md states the current release identity
 - No accidental absolute local paths
 - No stale current-release phrases
 - README current-release identity
+- docs/README.md index lists every tracked document
 - No accidental .hardproof/ or database files in package artifacts
 """
 
@@ -35,6 +37,10 @@ STALE_PHRASES = [
     "publication pending",
     "v0.2.0 not published",
     "v0.2.0 development",
+    "current public release: v0.3.1",
+    "current development boundary: v0.4.0",
+    "current development task: v0.4.0",
+    "next planned product release: v0.4.0",
 ]
 
 # Files/directories that are exempt from stale-phrase and absolute-path checking
@@ -55,7 +61,19 @@ AGENTS_FILES = [
     "docs/AGENTS.md",
 ]
 
-AGENTS_MAX_CHARS = 16_000
+AGENTS_MAX_CHARS = 14_000
+AGENTS_MIN_CHARS = 8_000
+
+# Current-release identity that the root AGENTS.md must state
+CURRENT_RELEASE_IDENTITY = "v1.0.0 Proven"
+
+# Docs index that must list every tracked document (except the index itself
+# and the docs-local AGENTS.md)
+DOCS_INDEX = "docs/README.md"
+DOCS_INDEX_EXEMPT = {
+    "docs/README.md",
+    "docs/AGENTS.md",
+}
 
 
 def _tracked_files() -> list[Path]:
@@ -90,6 +108,22 @@ def check_agents_files() -> list[str]:
         size = full.stat().st_size
         if size > AGENTS_MAX_CHARS:
             errors.append(f"AGENTS.md too large ({size} bytes, max {AGENTS_MAX_CHARS}): {path}")
+        if path == "AGENTS.md" and size < AGENTS_MIN_CHARS:
+            errors.append(f"Root AGENTS.md too small ({size} bytes, min {AGENTS_MIN_CHARS})")
+    return errors
+
+
+def check_agents_current_release() -> list[str]:
+    """Root AGENTS.md must identify the current public release."""
+    errors = []
+    root_agents = REPO_ROOT / "AGENTS.md"
+    if not root_agents.exists():
+        return ["AGENTS.md not found"]
+    text = root_agents.read_text(encoding="utf-8", errors="replace")
+    if CURRENT_RELEASE_IDENTITY not in text:
+        errors.append(
+            f"Root AGENTS.md must state current release identity '{CURRENT_RELEASE_IDENTITY}'"
+        )
     return errors
 
 
@@ -111,15 +145,15 @@ def check_absolute_paths() -> list[str]:
         for pattern in ABSOLUTE_PATH_PATTERNS:
             for match in pattern.finditer(text):
                 errors.append(f"Absolute path in {rel_str}: {match.group()}")
-    # Also check tracked Python source files
+    # Also check tracked Python source files under the package
     for py_file in _tracked_files():
         if py_file.suffix != ".py":
-            continue
-        if "hardproof" not in py_file.parts:
             continue
         try:
             rel = py_file.relative_to(REPO_ROOT)
         except ValueError:
+            continue
+        if "hardproof" not in rel.parts:
             continue
         try:
             text = py_file.read_text(encoding="utf-8", errors="replace")
@@ -158,10 +192,43 @@ def check_readme_current_release() -> list[str]:
         return ["README.md not found"]
     errors = []
     text = readme.read_text(encoding="utf-8", errors="replace")
-    if "v0.2.0 Gatehouse" not in text:
-        errors.append("README.md does not mention v0.2.0 Gatehouse as current release")
-    if "v0.3.0" in text and "not started" not in text.lower() and "planned" not in text.lower():
-        errors.append("README.md references v0.3.0 without 'not started' or 'planned' qualifier")
+    if CURRENT_RELEASE_IDENTITY not in text:
+        errors.append(
+            f"README.md does not mention {CURRENT_RELEASE_IDENTITY} as current release"
+        )
+    if "is the current public release" not in text:
+        errors.append("README.md must describe the current public release explicitly")
+    if "## Current Release" in text:
+        table = text.split("## Current Release", 1)[1]
+        rows = [line for line in table.splitlines() if line.startswith("|")]
+        if rows and not rows[0].startswith("| Current | v1.0.0"):
+            errors.append(f"Current Release table must list v1.0.0 as current: {rows[0]}")
+    return errors
+
+
+def check_docs_index_complete() -> list[str]:
+    """Every tracked docs/*.md (except the index and docs-local AGENTS.md) must
+    be referenced from the docs/README.md index."""
+    errors = []
+    index = REPO_ROOT / DOCS_INDEX
+    if not index.exists():
+        return [f"Missing docs index: {DOCS_INDEX}"]
+    index_text = index.read_text(encoding="utf-8", errors="replace")
+    for doc in _tracked_files():
+        if doc.suffix != ".md":
+            continue
+        try:
+            rel = str(doc.relative_to(REPO_ROOT)).replace("\\", "/")
+        except ValueError:
+            continue
+        if not rel.startswith("docs/"):
+            continue
+        if rel in DOCS_INDEX_EXEMPT:
+            continue
+        # The index references documents by their relative path (with or
+        # without a leading ../docs/ prefix); match on the leaf relative path.
+        if rel not in index_text and rel.removeprefix("docs/") not in index_text:
+            errors.append(f"Document not listed in {DOCS_INDEX}: {rel}")
     return errors
 
 
@@ -211,11 +278,13 @@ def main() -> int:
     all_errors: list[str] = []
 
     all_errors.extend(check_agents_files())
+    all_errors.extend(check_agents_current_release())
     all_errors.extend(check_absolute_paths())
     all_errors.extend(check_stale_phrases())
     all_errors.extend(check_readme_current_release())
     all_errors.extend(check_no_tracked_junk())
     all_errors.extend(check_internal_links())
+    all_errors.extend(check_docs_index_complete())
 
     if all_errors:
         print(f"Documentation validation found {len(all_errors)} issue(s):")

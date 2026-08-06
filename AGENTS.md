@@ -5,10 +5,8 @@ This file loads as project context when Hermes Agent starts in the Hardproof rep
 ## Project Identity
 
 - **Hardproof** is a persistent, risk-aware engineering protocol for Hermes Agent.
-- **Current public release:** v0.3.1 Workcells Hardening (PyPI, GitHub)
-- **Current development boundary:** v0.4.0 Challenge Chamber — **not started**.
-- **Workcells hardening:** released (v0.3.1).
-- **Next planned product release:** v0.4.0 Challenge Chamber — **not started**.
+- **Current public release:** v1.0.0 Proven (PyPI, GitHub).
+- **Current development boundary:** none scheduled; the v0.4.0–v1.0.0 arc is released.
 - Hardproof is a standalone Hermes plugin discovered through the `hermes_agent.plugins` entry-point group.
 - It uses only public Hermes registration, hook, command, skill, and dispatch APIs.
 - The plugin remains opt-in. Hardproof does not modify Hermes core files.
@@ -30,7 +28,7 @@ Inspect these files in order before changing code:
 11. Relevant ADRs in `docs/adr/`
 12. Relevant tests in `tests/`
 
-Do not assume the README is the entire specification. Read the files relevant to your task.
+Do not assume the README is the entire specification.
 
 ## Architecture Map
 
@@ -46,17 +44,24 @@ hardproof/
 ├── commands/
 │   ├── cli.py               # hermes hardproof CLI adapter
 │   ├── slash.py             # /hardproof slash-command adapter
-│   └── shared.py            # Shared command implementation (~781 lines)
+│   └── shared.py            # Shared command implementation
 ├── domain/
 │   ├── enums.py             # RunStage, RunProfile, ApprovalGate, etc.
 │   ├── models.py            # Run, VerificationCheck, SessionBinding, etc.
 │   ├── snapshots.py         # Workspace state snapshots
-│   └── transitions.py       # Stage transition logic
+│   ├── transitions.py       # Stage transition logic
+│   └── workcells.py         # Workcell task/attempt state machines
 ├── hooks/
 │   ├── context.py           # Pre-turn context injection
 │   ├── sessions.py          # Session lifecycle hooks
 │   ├── tool_policy.py       # Tool-call policy enforcement
 │   └── verification.py      # Verification hook
+├── isolation/
+│   ├── guard.py             # Workspace isolation guard
+│   └── adapters.py          # Execution backend adapters
+├── kanban/
+│   ├── worker.py            # Workcell implementer subagent contract
+│   └── approvals.py         # Workcell approval routing
 ├── migrations/              # SQL migration files
 ├── policy/
 │   ├── packs.py             # Language policy packs (Python, Node, Rust, Go)
@@ -74,12 +79,18 @@ hardproof/
 │   ├── authority.py         # Human authority registry
 │   ├── decisions.py         # Policy decision persistence
 │   ├── evidence.py          # Verification evidence service
+│   ├── fix_re_review.py     # Challenge Chamber fix/re-review loop
+│   ├── hermes_children.py   # Public Hermes child-session adapter
+│   ├── packages.py          # Package metadata services
 │   ├── reports.py           # Report generation
+│   ├── review_dispatch.py   # Challenge Chamber reviewer dispatch
 │   ├── risks.py             # Risk classification
 │   ├── runs.py              # Run management
 │   ├── sessions.py          # Session binding
 │   ├── tasks.py             # Task management
-│   └── waivers.py           # Waiver service
+│   ├── waivers.py           # Waiver service
+│   ├── workcell_artifacts.py# Workcell artifact handling
+│   └── workcells.py         # Workcell scheduling and claims
 ├── skills/                  # 9 stage skill modules
 │   ├── orchestrate/
 │   ├── discover/
@@ -100,6 +111,9 @@ hardproof/
 │   ├── discovery.md
 │   ├── plan.md
 │   └── review.md
+├── validation/              # Protocol SDK validation interfaces
+├── vault/
+│   └── lease.py             # Vault lease state
 └── tools/
     ├── handlers.py          # Tool handler implementations
     └── schemas.py           # Exact JSON schemas for 6 tools
@@ -118,6 +132,7 @@ hardproof/
 ├── CODEOWNERS              # Ownership
 └── pull_request_template.md
 scripts/
+├── check_docs.py           # Documentation validation
 ├── smoke_install.py        # Clean wheel installation test
 └── build_sbom.py           # SBOM generation
 ```
@@ -208,6 +223,7 @@ python -m pip install -e ".[dev]"
 python -m pytest                       # Run all tests
 python -m ruff check hardproof tests scripts
 python -m mypy hardproof               # Strict mypy
+python scripts/check_docs.py           # Documentation validation
 python -m build                        # Build wheel and sdist
 python -m twine check dist/*.whl dist/*.tar.gz
 ```
@@ -253,7 +269,7 @@ python -m pytest tests/unit/test_domain_transitions.py tests/unit/test_stage_rul
 
 ## Release Rules
 
-1. Release tags are cryptographically signed using SSH (Ed25519).
+1. Release tags are cryptographically signed using SSH (Ed25519). Use annotated tags (`git tag -s`).
 2. Approved signers are listed in `.github/release-signers`.
 3. Public tags are immutable — never delete, recreate, or force-push a published tag.
 4. PyPI uses Trusted Publishing (OIDC). No manual uploads. No static PyPI token.
@@ -263,9 +279,9 @@ python -m pytest tests/unit/test_domain_transitions.py tests/unit/test_stage_rul
 
 ## Task Boundaries
 
-- **Current development task:** v0.4.0 Challenge Chamber — **not started**.
-- **Next planned product release:** v0.4.0 Challenge Chamber — **not started**.
-- Do not begin v0.4.0 implementation during the v0.3.1 release program.
+- **Current development task:** none scheduled.
+- **Next planned product release:** none scheduled.
+- Do not begin new product development without an explicit task from the project owner.
 
 ## Completion Report
 
