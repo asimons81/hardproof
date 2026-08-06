@@ -105,11 +105,13 @@ def check_agents_files() -> list[str]:
         if not full.exists():
             errors.append(f"Missing AGENTS.md: {path}")
             continue
-        size = full.stat().st_size
+        # Measure characters, not bytes, so CRLF checkouts on Windows do not
+        # inflate the size past the limit.
+        size = len(full.read_text(encoding="utf-8", errors="replace"))
         if size > AGENTS_MAX_CHARS:
-            errors.append(f"AGENTS.md too large ({size} bytes, max {AGENTS_MAX_CHARS}): {path}")
+            errors.append(f"AGENTS.md too large ({size} chars, max {AGENTS_MAX_CHARS}): {path}")
         if path == "AGENTS.md" and size < AGENTS_MIN_CHARS:
-            errors.append(f"Root AGENTS.md too small ({size} bytes, min {AGENTS_MIN_CHARS})")
+            errors.append(f"Root AGENTS.md too small ({size} chars, min {AGENTS_MIN_CHARS})")
     return errors
 
 

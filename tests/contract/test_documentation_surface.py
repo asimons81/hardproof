@@ -31,16 +31,18 @@ class TestAgentsFiles:
         full = REPO_ROOT / rel_path
         if not full.exists():
             pytest.skip(f"{rel_path} not found")
-        size = full.stat().st_size
-        assert size <= self.MAX_CHARS, f"{rel_path} is {size} bytes (max {self.MAX_CHARS})"
+        # Measure characters, not bytes, so CRLF checkouts on Windows do not
+        # inflate the size past the limit.
+        size = len(full.read_text(encoding="utf-8", errors="replace"))
+        assert size <= self.MAX_CHARS, f"{rel_path} is {size} chars (max {self.MAX_CHARS})"
 
     def test_root_agents_file_min_size(self) -> None:
         full = REPO_ROOT / "AGENTS.md"
         if not full.exists():
             pytest.skip("AGENTS.md not found")
-        size = full.stat().st_size
+        size = len(full.read_text(encoding="utf-8", errors="replace"))
         assert size >= self.ROOT_MIN_CHARS, (
-            f"Root AGENTS.md is {size} bytes (min {self.ROOT_MIN_CHARS})"
+            f"Root AGENTS.md is {size} chars (min {self.ROOT_MIN_CHARS})"
         )
 
     def test_root_agents_identifies_current_release(self) -> None:
