@@ -29,7 +29,7 @@ jobs:
           cache-dependency-path: |
             pyproject.toml
             constraints/ci.txt
-      - run: python -m pip install --upgrade "pip==26.1.2"
+      - run: python -m pip install --upgrade -c constraints/ci.txt pip
       - run: python -m pip install -e ".[dev]"
       - name: Environment diagnostics
         run: |

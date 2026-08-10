@@ -48,7 +48,7 @@ nh3==0.3.6
 packageurl-python==0.17.6
 packaging==26.2
 pathspec==1.1.1
-pip==26.1.2
+pip==26.2.1
 pip-api==0.0.34
 pip-requirements-parser==32.0.1
 pip_audit==2.10.1
