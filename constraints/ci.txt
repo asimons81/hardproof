@@ -18,7 +18,7 @@ cyclonedx-python-lib==11.11.0
 defusedxml==0.7.1
 docutils==0.23
 execnet==2.1.2
-filelock==3.32.0
+filelock==3.32.2
 fqdn==1.5.1
 hypothesis==6.165.1
 id==1.6.1
