@@ -36,7 +36,7 @@ def test_release_workflow_uses_reproducible_python_environment() -> None:
         "PIP_BUILD_CONSTRAINT: constraints/ci.txt",
         "cache-dependency-path:",
         "constraints/ci.txt",
-        'python -m pip install --upgrade "pip==26.1.2"',
+        'python -m pip install --upgrade -c constraints/ci.txt pip',
         'python -m pip install -e ".[dev]"',
     ):
         assert required in text, f"release workflow lost reproducibility contract: {required}"
