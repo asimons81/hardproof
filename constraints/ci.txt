@@ -10,7 +10,7 @@ build==1.5.0
 CacheControl==0.14.4
 certifi==2026.7.22
 cffi==2.1.1
-charset-normalizer==3.4.9
+charset-normalizer==3.5.0
 colorama==0.4.6
 coverage==7.15.3
 cryptography==50.0.0
