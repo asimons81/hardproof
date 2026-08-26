@@ -7,6 +7,8 @@
 [![PyPI](https://img.shields.io/pypi/v/hardproof)](https://pypi.org/project/hardproof/)
 [![X Follow](https://img.shields.io/twitter/follow/tonysimons_?style=social)](https://x.com/tonysimons_)
 
+![Hardproof evidence verification architecture showing capture, fingerprinting, timestamping, and certified proof](docs/hardproof-evidence-verification-architecture.webp)
+
 > **v1.0.1 Proven is the current public release on PyPI.** Stable public contracts; representative Standard and Critical workflows validated across repositories, operating systems, and execution backends.
 
 Hardproof gives coding agents a persistent, risk-aware engineering process that turns ambiguous software requests into reviewed, verified results while preserving the evidence behind every completion claim.
