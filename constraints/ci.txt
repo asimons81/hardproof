@@ -20,7 +20,7 @@ docutils==0.23
 execnet==2.1.2
 filelock==3.32.4
 fqdn==1.5.1
-hypothesis==6.165.10
+hypothesis==6.167.1
 id==1.6.1
 idna==3.19
 importlib_metadata==9.0.0
