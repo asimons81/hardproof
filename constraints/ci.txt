@@ -65,7 +65,7 @@ pytest-xdist==3.8.0
 python-dateutil==2.9.0.post0
 pywin32-ctypes==0.2.3
 PyYAML==6.0.3
-readme_renderer==45.0
+readme_renderer==46.0
 referencing==0.37.0
 requests==2.34.2
 requests-toolbelt==1.0.0
